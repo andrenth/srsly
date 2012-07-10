@@ -1,0 +1,55 @@
+OASISFormat: 0.2
+Name:        spfd
+Version:     0.1.0
+Synopsis:    SPF daemon
+Authors:     Andre Nathan
+License:     BSD3
+
+Executable "spfd"
+  Path:            src
+  BuildTools:      ocamlbuild
+  MainIs:          spfd.ml
+  Install:         true
+  CompiledObject:  best
+  BuildDepends:    str,
+                   release,
+                   lwt,
+                   lwt.unix,
+                   lwt.syntax
+
+Executable "spf-policyd"
+  Path:            src
+  BuildTools:      ocamlbuild
+  MainIs:          spf_policyd.ml
+  Install:         true
+  CompiledObject:  best
+  BuildDepends:    spf,
+                   str,
+                   unix,
+                   threads,
+                   uint.uint32,
+                   uint.uint128,
+                   release,
+                   lwt,
+                   lwt.unix,
+                   lwt.syntax,
+                   lwt.preemptive
+
+Executable "spf-milter"
+  Path:            src
+  BuildTools:      ocamlbuild
+  MainIs:          spf_milter.ml
+  Install:         true
+  CompiledObject:  best
+  BuildDepends:    milter,
+                   spf,
+                   str,
+                   unix,
+                   threads,
+                   uint.uint32,
+                   uint.uint128,
+                   release,
+                   lwt,
+                   lwt.unix,
+                   lwt.syntax,
+                   lwt.preemptive
