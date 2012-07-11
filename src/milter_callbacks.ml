@@ -3,6 +3,7 @@ open Util
 
 type result
   = No_result
+  | Authenticated
   | Whitelisted of string
   | Spf_response of SPF.response
 
@@ -15,6 +16,8 @@ type priv =
 let spf_server = SPF.server SPF.Dns_cache
 
 let config = Config.default
+
+let authenticated_header = "X-Comment: authenticated by trusted mechanism"
 
 let unbox_spf = function
   | `Error e -> failwith (sprintf "error: %s" e)
@@ -131,23 +134,24 @@ let envfrom ctx from args =
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       if is_auth || verified then
-        let result = Whitelisted "X-Comment: authenticated client" in
-        { priv with result = result }, Milter.Continue
+        { priv with result = Authenticated }, Milter.Continue
       else
         match priv.result with
-        | No_result ->
+        | No_result | Authenticated | Spf_response _ ->
+            (* This callback may be called multiple times in the same
+             * connection, so ignore message-specific results. *)
             let spf_res, milter_res = spf_check ctx priv (canonicalize from) in
             { priv with result = Spf_response spf_res }, milter_res
         | Whitelisted _ ->
-            priv, Milter.Continue
-        | Spf_response _ ->
-            invalid_arg "envfrom") (* not possible here *)
+            (* Whitelists are IP-based, so just move on. *)
+            priv, Milter.Continue)
 
 let eom ctx =
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       (match priv.result with
       | No_result -> ()
+      | Authenticated -> milter_add_header ctx authenticated_header
       | Whitelisted s -> milter_add_header ctx s
       | Spf_response r -> milter_add_header ctx (SPF.received_spf r));
       priv, Milter.Continue)
