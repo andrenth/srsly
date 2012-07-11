@@ -3,8 +3,6 @@ open Printf
 
 (* TODO configuration file *)
 
-let context_mtx = Lwt_mutex.create ()
-
 let set_log_level level =
   Lwt_log.Section.set_level Lwt_log.Section.main level
 
