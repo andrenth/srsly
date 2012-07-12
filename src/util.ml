@@ -28,13 +28,15 @@ let (<|>) opt1 opt2 =
   | None -> opt2
   | x -> x
 
-module type SETOFLIST = sig
-  include Set.S
-  val of_list : elt list -> t
-end
+module SetOfList = struct
+  module type S = sig
+    include Set.S
+    val of_list : elt list -> t
+  end
 
-module SetOfList (E : Set.OrderedType) : SETOFLIST with type elt = E.t = struct
-  include Set.Make(E)
-  let of_list =
-    List.fold_left (fun s e -> add e s) empty
+  module Make (E : Set.OrderedType) : S with type elt = E.t = struct
+    include Set.Make(E)
+    let of_list =
+      List.fold_left (fun s e -> add e s) empty
+  end
 end

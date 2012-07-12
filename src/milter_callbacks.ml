@@ -93,12 +93,12 @@ let with_priv_data z ctx f =
   | None -> z
   | Some p -> let p', r = f p in Milter.setpriv ctx p'; r
 
-module FlagSet = SetOfList(struct
+module FlagSet = SetOfList.Make(struct
   type t = Milter.flag
   let compare = compare
 end)
 
-module StepSet = SetOfList(struct
+module StepSet = SetOfList.Make(struct
   type t = Milter.step
   let compare = compare
 end)
