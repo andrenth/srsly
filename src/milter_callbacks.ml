@@ -13,7 +13,7 @@ type priv =
   ; result : result
   }
 
-let spf_server = SPF.server SPF.Dns_cache
+let spf = SPF.server SPF.Dns_cache
 
 let config = Config.default
 
@@ -53,7 +53,7 @@ let milter_tempfail ctx comment =
 let spf_check_helo ctx priv =
   let addr = priv.addr in
   let helo = some (priv.helo) in
-  let spf_res = unbox_spf (SPF.check_helo spf_server addr helo) in
+  let spf_res = unbox_spf (SPF.check_helo spf addr helo) in
   let milter_res = match SPF.result spf_res with
   | SPF.Fail c ->
       milter_reject ctx (SPF.smtp_comment c)
@@ -69,7 +69,7 @@ let spf_check_helo ctx priv =
 let spf_check_from ctx priv from =
   let addr = priv.addr in
   let helo = some (priv.helo) in
-  let spf_res = unbox_spf (SPF.check_from spf_server addr helo from) in
+  let spf_res = unbox_spf (SPF.check_from spf addr helo from) in
   let milter_res = match SPF.result spf_res with
   | SPF.Fail c -> milter_reject ctx (SPF.smtp_comment c)
   | SPF.Temperror -> milter_tempfail ctx (SPF.header_comment spf_res)
