@@ -35,14 +35,35 @@ Executable "spf-policyd"
                    lwt.syntax,
                    lwt.preemptive
 
-Executable "spf-milter"
+Executable "spf-milter-in"
   Path:            src
   BuildTools:      ocamlbuild
-  MainIs:          spf_milter.ml
+  MainIs:          spf_milter_in.ml
   Install:         true
   CompiledObject:  best
   BuildDepends:    milter,
                    spf,
+                   srs,
+                   str,
+                   unix,
+                   threads,
+                   uint.uint32,
+                   uint.uint128,
+                   release,
+                   lwt,
+                   lwt.unix,
+                   lwt.syntax,
+                   lwt.preemptive
+
+Executable "spf-milter-out"
+  Path:            src
+  BuildTools:      ocamlbuild
+  MainIs:          spf_milter_out.ml
+  Install:         true
+  CompiledObject:  best
+  BuildDepends:    milter,
+                   spf,
+                   srs,
                    str,
                    unix,
                    threads,
