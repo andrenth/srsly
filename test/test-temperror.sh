@@ -7,7 +7,7 @@ HELOFQDN='gwmail.bradescoseguros.com.br'
 
 runtest "`milter-test-server                         \
             --connection-spec    $CONNSPEC           \
-            --connect-address    inet:8888@$HELOFQDN \
+            --connect-address    inet:9999@$HELOFQDN \
             --helo-fqdn          $HELOFQDN           \
             --envelope-from      $ENVFROM            \
             --reading-timeout    30                  \

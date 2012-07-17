@@ -7,7 +7,7 @@ HELOFQDN="`host -t mx openspf.net | awk '{ print $NF}'`"
 
 runtest "`milter-test-server                      \
             --connection-spec $CONNSPEC           \
-            --connect-address inet:8888@$HELOFQDN \
+            --connect-address inet:9999@$HELOFQDN \
             --helo-fqdn       $HELOFQDN           \
             --envelope-from   $ENVFROM`"          \
         '^status: reject'

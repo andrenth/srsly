@@ -8,7 +8,7 @@ HELOFQDN="`host $HELOADDR | head -n1 | awk '{ print $NF}'`"
 
 runtest "`milter-test-server                      \
             --connection-spec $CONNSPEC           \
-            --connect-address inet:8888@$HELOADDR \
+            --connect-address inet:9999@$HELOADDR \
             --helo-fqdn       $HELOFQDN           \
             --envelope-from   $ENVFROM`"          \
         '^status: pass'
