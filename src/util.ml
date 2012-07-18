@@ -30,6 +30,12 @@ let (<|>) opt1 opt2 =
   | None -> opt2
   | x -> x
 
+let applyn f x n =
+  let rec apply z = function
+    | 0 -> z
+    | k -> apply (f z) (k - 1) in
+  apply x n
+
 module SetOfList = struct
   module type S = sig
     include Set.S

@@ -23,7 +23,7 @@ let srs = SRS.make
             (Config.srs_hash_length config)
             (Config.srs_separator config)
 
-let srs_re = Str.regexp "^SRS[01][=+-]"
+let srs_re = Str.regexp "^SRS\\([01]\\)[=+-]"
 
 let unbox_spf = function
   | `Error e -> failwith (sprintf "error: %s" e)
@@ -155,7 +155,8 @@ let envrcpt ctx rcpt args =
       if priv.is_bounce && Str.string_match srs_re rcpt 0 then begin
         debug "got an SRS-signed bounce";
         try
-          let rev_rcpt = SRS.reverse srs rcpt in
+          let n = 1 + int_of_string (Str.matched_group 1 rcpt) in
+          let rev_rcpt = applyn (SRS.reverse srs) (canonicalize rcpt) n in
           debug "SRS-reversed address for '%s': '%s'" rcpt rev_rcpt;
           { priv with rcpt = Some (rcpt, rev_rcpt) }, Milter.Continue
         with SRS.SRS_error s ->
