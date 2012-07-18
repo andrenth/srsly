@@ -27,16 +27,19 @@ let connect ctx host addr =
   Milter.Continue
 
 let envfrom ctx from args =
-  with_priv_data Milter.Tempfail ctx
-    (fun priv ->
-      let srs_domain = Config.srs_domain config in
-      let myhostname = Milter.getsymval ctx "j" in
-      match srs_domain <|> myhostname with
-      | Some alias ->
-          let signed_from = SRS.forward srs from alias in
-          { signed_from = Some signed_from }, Milter.Continue
-      | None ->
-          priv, Milter.Tempfail)
+  if from = "<>" then
+    Milter.Continue
+  else
+    with_priv_data Milter.Tempfail ctx
+      (fun priv ->
+        let srs_domain = Config.srs_domain config in
+        let myhostname = Milter.getsymval ctx "j" in
+        match srs_domain <|> myhostname with
+        | Some alias ->
+            let signed_from = SRS.forward srs from alias in
+            { signed_from = Some signed_from }, Milter.Continue
+        | None ->
+            priv, Milter.Tempfail)
 
 let eom ctx =
   with_priv_data Milter.Tempfail ctx
