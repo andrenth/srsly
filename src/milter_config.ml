@@ -63,3 +63,6 @@ let srs_hash_length c =
 
 let srs_separator c =
   c.srs_separator
+
+let log_level c =
+  c.log_level

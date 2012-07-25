@@ -28,11 +28,11 @@ let filter =
 
 let main fd =
   lwt () = Lwt_log.notice "starting up" in
+  Milter.setdbg (Milter_config.log_level milter_config);
   Milter.setconn (fst (Milter_config.listen_address milter_config));
   Milter.register filter;
   Milter.main ();
   return ()
-
 
 let () =
   set_log_level (Config.log_level config);
