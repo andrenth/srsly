@@ -13,8 +13,7 @@ let check_networks networks msg addr =
           check rest in
   check networks
 
-(* XXX *)
-let config = Config.milter_in_default
+let config = Config.configuration
 
 let check_local addr =
   check_networks

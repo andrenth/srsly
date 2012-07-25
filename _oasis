@@ -12,7 +12,10 @@ Executable "spfd"
   Install:         true
   CompiledObject:  best
   BuildDepends:    str,
+                   uint.uint32,
+                   uint.uint128,
                    release,
+                   release.config,
                    lwt,
                    lwt.unix,
                    lwt.syntax
@@ -30,6 +33,7 @@ Executable "spf-policyd"
                    uint.uint32,
                    uint.uint128,
                    release,
+                   release.config,
                    lwt,
                    lwt.unix,
                    lwt.syntax,
@@ -50,6 +54,7 @@ Executable "spf-milter-in"
                    uint.uint32,
                    uint.uint128,
                    release,
+                   release.config,
                    lwt,
                    lwt.unix,
                    lwt.syntax,
@@ -70,6 +75,7 @@ Executable "spf-milter-out"
                    uint.uint32,
                    uint.uint128,
                    release,
+                   release.config,
                    lwt,
                    lwt.unix,
                    lwt.syntax,

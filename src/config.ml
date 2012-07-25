@@ -1,30 +1,96 @@
-type policyd =
-  { policyd_user                   : string
-  ; policyd_listen_address         : string
-  ; policyd_log_level              : Lwt_log.level
-  ; policyd_local_whitelist        : Network.t list
-  ; policyd_relay_whitelist        : Network.t list
-  ; policyd_fail_on_helo_temperror : bool
+open Printf
+open Release_config_types
+open Release_config_validations
+open Util
+
+type slave_config
+  = Policyd of Policyd_config.t
+  | Milter of Milter_config.t
+
+type t =
+  { lock_file              : Lwt_io.file_name
+  ; user                   : string
+  ; binary_path            : Lwt_io.file_name
+  ; log_level              : Lwt_log.level
+  ; fail_on_helo_temperror : bool
+  ; local_whitelist        : Network.t list
+  ; relay_whitelist        : Network.t list
+  ; slave                  : slave_config
   }
 
-type milter =
-  { milter_user                     : string
-  ; milter_listen_address           : string
-  ; milter_log_level                : Lwt_log.level
-  ; milter_local_whitelist          : Network.t list
-  ; milter_relay_whitelist          : Network.t list
-  ; milter_reject_on_helo_temperror : bool
-  ; milter_srs_domain               : string option
-  ; milter_srs_secret               : string
-  ; milter_srs_hash_max_age         : int
-  ; milter_srs_hash_length          : int 
-  ; milter_srs_separator            : SRS.separator
-  }
+let file =
+  if Array.length Sys.argv > 1 then Sys.argv.(1)
+  else "/etc/spfd.conf"
 
-type t
-  = Milter_in of milter
-  | Milter_out of milter
-  | Policyd of policyd
+let log_levels =
+  [ "debug"
+  ; "info"
+  ; "notice"
+  ; "warning"
+  ; "error"
+  ; "fatal"
+  ]
+
+let socket_string = function
+  | `Str s ->
+      if Str.string_match (Str.regexp "^\\(unix\\|local\\):\\(.+\\)") s 0 then
+        existing_basename (`Str (Str.matched_group 1 s))
+      else if Str.string_match (Str.regexp "^(inet6?:[0-9]+@\\(.+\\)") s 0 then
+        try
+          ignore (Unix.gethostbyname (Str.matched_group 1 s));
+          `Valid
+        with _ -> 
+          `Invalid "socket_string: invalid hostname or address"
+      else
+        `Invalid "socket_string: invalid socket string"
+  | _ ->
+      invalid_arg "socket_string: not a string"
+
+let spec =
+  [ `Global
+      [ `Optional ("lock_file", existing_basename)
+      ; `Optional ("user", existing_user)
+      ; `Optional ("binary_path", existing_directory)
+      ; `Optional ("log_level", one_of_strings log_levels)
+      ; `Optional ("fail_on_helo_temperror", bool)
+      ; `Optional ("local_whitelist", string)
+      ; `Optional ("relay_whitelist", string)
+      ]
+
+  ; `Optional ("policyd",
+      [ `Required ("listen_address", socket_string)
+      ; `Optional ("num_slaves", int)
+      ])
+
+  ; `Optional ("milter",
+      [ `Required ("listen_address_in", socket_string)
+      ; `Required ("listen_address_out", socket_string)
+      ; `Optional ("srs_domain", string)
+      ; `Required ("srs_secret", string)
+      ; `Optional ("srs_hash_max_age", int)
+      ; `Optional ("srs_hash_length", int)
+      ; `Optional ("srs_hash_separator", one_of_strings ["+"; "-"; "="])
+      ; `Optional ("log_level", int_in_range (0, 6))
+      ])
+  ]
+
+let get conf key =
+  Release_config.get conf key () 
+
+let get_req conf key =
+  Release_config.get_exn conf key () 
+
+let log_level_of_string = function
+  | "debug" -> Lwt_log.Debug
+  | "info" -> Lwt_log.Info
+  | "notice" -> Lwt_log.Notice
+  | "warning" -> Lwt_log.Warning
+  | "error" -> Lwt_log.Error
+  | "fatal" -> Lwt_log.Fatal
+  | _ -> invalid_arg "Config.log_level_of_string"
+
+let whitelist_of_string s =
+  List.map Network.of_string (Str.split (Str.regexp "[ \t]*,[ \t]+*") s)
 
 let default_local_addresses =
   List.map Network.of_string
@@ -32,87 +98,94 @@ let default_local_addresses =
     ; "::ffff:127.0.0.0/104"
     ]
 
-let default_relay_addresses =
-  List.map Network.of_string
-    []
+let default_relay_addresses = []
 
-let user = function
-  | Milter_in m | Milter_out m -> m.milter_user
-  | Policyd p -> p.policyd_user
+let lock_file = "/var/run/spfd/spfd.pid"
+let user = "spfd"
+let binary_path = "/usr/lib/spfd"
+let log_level = Lwt_log.Notice
+let fail_on_helo_temperror = true
+let local_whitelist = default_local_addresses
+let relay_whitelist = default_relay_addresses
 
-let listen_address = function
-  | Milter_in m | Milter_out m -> m.milter_listen_address
-  | Policyd p -> p.policyd_listen_address
-
-let log_level = function
-  | Milter_in m | Milter_out m -> m.milter_log_level
-  | Policyd p -> p.policyd_log_level
-
-let local_whitelist = function
-  | Milter_in m | Milter_out m -> m.milter_local_whitelist
-  | Policyd p -> p.policyd_local_whitelist
-
-let relay_whitelist = function
-  | Milter_in m | Milter_out m -> m.milter_relay_whitelist
-  | Policyd p -> p.policyd_relay_whitelist
-
-let fail_on_helo_temperror = function
-  | Milter_in m | Milter_out m -> m.milter_reject_on_helo_temperror
-  | Policyd p -> p.policyd_fail_on_helo_temperror
-
-let srs_domain = function
-  | Milter_in m | Milter_out m -> m.milter_srs_domain
-  | Policyd p -> invalid_arg "Config.srs_domain: policyd mode has no SRS support"
-
-let srs_secret = function
-  | Milter_in m | Milter_out m -> m.milter_srs_secret
-  | Policyd p -> invalid_arg "Config.srs_secret: policyd mode has no SRS support"
-
-let srs_hash_max_age = function
-  | Milter_in m | Milter_out m -> m.milter_srs_hash_max_age
-  | Policyd p -> invalid_arg "Config.srs_hash_max_age: policyd mode has no SRS support"
-
-let srs_hash_length = function
-  | Milter_in m | Milter_out m -> m.milter_srs_hash_length
-  | Policyd p -> invalid_arg "Config.srs_hash_length: policyd mode has no SRS support"
-
-let srs_separator = function
-  | Milter_in m | Milter_out m -> m.milter_srs_separator
-  | Policyd p -> invalid_arg "Config.srs_separator: policyd mode has no SRS support"
-
-let milter_in_default = Milter_in
-  { milter_user                     = "andre"
-  ; milter_listen_address           = "inet:9999@127.0.0.1"
-  ; milter_log_level                = Lwt_log.Debug
-  ; milter_local_whitelist          = default_local_addresses
-  ; milter_relay_whitelist          = default_relay_addresses
-  ; milter_reject_on_helo_temperror = true
-  ; milter_srs_domain               = None
-  ; milter_srs_secret               = "secret"
-  ; milter_srs_hash_max_age         = 8
-  ; milter_srs_hash_length          = 8
-  ; milter_srs_separator            = SRS.Plus
+let make conf =
+  let lock_file = default lock_file string_value (get conf "lock_file") in
+  let user = default user string_value (get conf "user") in
+  let binary_path = default binary_path string_value (get conf "binary_path") in
+  let log_level =
+    default log_level
+      (fun l -> log_level_of_string (string_value l))
+      (get conf "log_level") in
+  let fail_on_helo_temperror =
+    default fail_on_helo_temperror
+      bool_value
+      (get conf "fail_on_helo_temperror") in
+  let local_whitelist =
+    default local_whitelist
+      (fun w -> whitelist_of_string (string_value w))
+      (get conf "local_whitelist") in
+  let relay_whitelist =
+    default relay_whitelist
+      (fun w -> whitelist_of_string (string_value w))
+      (get conf "relay_whitelist") in
+  let slave_config =
+    if Release_config.has_section conf "milter" then
+      Milter (Milter_config.of_configuration conf)
+    else
+      Policyd (Policyd_config.of_configuration conf) in
+  { lock_file              = lock_file
+  ; user                   = user
+  ; binary_path            = binary_path
+  ; log_level              = log_level
+  ; fail_on_helo_temperror = fail_on_helo_temperror
+  ; local_whitelist        = local_whitelist
+  ; relay_whitelist        = relay_whitelist
+  ; slave                  = slave_config
   }
 
-let milter_out_default = Milter_out
-  { milter_user                     = "andre"
-  ; milter_listen_address           = "inet:9998@127.0.0.1"
-  ; milter_log_level                = Lwt_log.Debug
-  ; milter_local_whitelist          = default_local_addresses
-  ; milter_relay_whitelist          = default_relay_addresses
-  ; milter_reject_on_helo_temperror = true
-  ; milter_srs_domain               = None
-  ; milter_srs_secret               = "secret"
-  ; milter_srs_hash_max_age         = 8
-  ; milter_srs_hash_length          = 8
-  ; milter_srs_separator            = SRS.Plus
-  }
+let validate conf =
+  let milter = Release_config.has_section conf "milter" in
+  let policyd = Release_config.has_section conf "policyd" in
+  if (milter && policyd) || (not milter && not policyd) then begin
+    fprintf stderr "choose either milter or policyd mode\n%!";
+    exit 1
+  end
 
-let policyd_default = Policyd
-  { policyd_user                   = "andre"
-  ; policyd_listen_address         = "unix:/tmp/spf.socket"
-  ; policyd_log_level              = Lwt_log.Debug
-  ; policyd_local_whitelist        = default_local_addresses
-  ; policyd_relay_whitelist        = default_relay_addresses
-  ; policyd_fail_on_helo_temperror = true
-  }
+let configuration =
+  match Release_config.parse file spec with
+  | `Configuration conf ->
+      validate conf;
+      make conf
+  | `Error e ->
+      fprintf stderr "%s\n%!" e;
+      exit 1
+
+let milter_config conf =
+  match conf.slave with
+  | Milter m -> m
+  | Policyd _ -> invalid_arg "milter_config"
+
+let policyd_config conf =
+  match conf.slave with
+  | Policyd p -> p
+  | Milter _ -> invalid_arg "policyd_config"
+
+let is_milter conf =
+  match conf.slave with
+  | Milter _ -> true
+  | Policyd _ -> false
+
+let user c =
+  c.user
+
+let log_level c =
+  c.log_level
+
+let local_whitelist c =
+  c.local_whitelist
+
+let relay_whitelist c =
+  c.relay_whitelist
+
+let fail_on_helo_temperror c =
+  c.fail_on_helo_temperror

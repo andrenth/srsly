@@ -1,4 +1,5 @@
 open Printf
+open Milter_util
 open Util
 
 type result
@@ -14,14 +15,15 @@ type priv =
   ; result    : result
   }
 
-let config = Config.milter_in_default
+let config = Config.configuration
+let milter_config = Config.milter_config config
 
 let spf = SPF.server SPF.Dns_cache
 let srs = SRS.make
-            (Config.srs_secret config)
-            (Config.srs_hash_max_age config)
-            (Config.srs_hash_length config)
-            (Config.srs_separator config)
+            (Milter_config.srs_secret milter_config)
+            (Milter_config.srs_hash_max_age milter_config)
+            (Milter_config.srs_hash_length milter_config)
+            (Milter_config.srs_separator milter_config)
 
 let srs_re = Str.regexp "^SRS\\([01]\\)[=+-]"
 

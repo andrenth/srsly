@@ -1,8 +1,7 @@
 open Lwt
 open Printf
 
-(* XXX configuration file *)
-let config = Config.milter_in_default
+let config = Config.configuration
 
 let policyd_slaves = ["spf_policyd.native"]
 let milter_slaves = ["spf_milter_in.native"; "spf_milter_out.native"]
@@ -10,14 +9,11 @@ let milter_slaves = ["spf_milter_in.native"; "spf_milter_out.native"]
 let spf_ipc_handler fd = return ()
 
 let slaves =
-  let bins = match config with
-  | Config.Milter_in _ | Config.Milter_out _ -> milter_slaves
-  | Config.Policyd _ -> policyd_slaves in
   List.map
     (fun bin ->
       let exec =  sprintf "%s/_build/src/%s" (Unix.getcwd ()) bin in
       (exec, spf_ipc_handler, 1))
-    bins
+    (if Config.is_milter config then milter_slaves else policyd_slaves)
 
 let lock_file = "/tmp/spfd.pid"
 let num_slaves = 4
