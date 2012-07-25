@@ -2,7 +2,7 @@ open Release_config_types
 open Util
 
 type t =
-  { log_level        : int
+  { debug_level      : int
   ; listen_address   : string * string
   ; srs_domain       : string option
   ; srs_secret       : string
@@ -17,7 +17,7 @@ let get conf key =
 let get_req conf key =
   Release_config.get_exn conf ~section:"milter" key () 
 
-let log_level = 0
+let debug_level = 0
 let srs_hash_max_age = 8
 let srs_hash_length = 8
 let srs_hash_separator = '='
@@ -35,9 +35,9 @@ let of_configuration conf =
     default srs_hash_separator
       (fun s -> (string_value s).[0])
       (get conf "srs_hash_separator") in
-  let log_level =
-    default log_level int_value (get conf "log_level") in
-  { log_level        = log_level
+  let debug_level =
+    default debug_level int_value (get conf "debug_level") in
+  { debug_level      = debug_level
   ; listen_address   = listen_address_in, listen_address_out
   ; srs_domain       = srs_domain
   ; srs_secret       = srs_secret
@@ -64,5 +64,5 @@ let srs_hash_length c =
 let srs_separator c =
   c.srs_separator
 
-let log_level c =
-  c.log_level
+let debug_level c =
+  c.debug_level

@@ -70,7 +70,7 @@ let spec =
       ; `Optional ("srs_hash_max_age", int)
       ; `Optional ("srs_hash_length", int)
       ; `Optional ("srs_hash_separator", one_of_strings ["+"; "-"; "="])
-      ; `Optional ("log_level", int_in_range (0, 6))
+      ; `Optional ("debug_level", int_in_range (0, 6))
       ])
   ]
 

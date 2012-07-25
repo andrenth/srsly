@@ -28,7 +28,7 @@ let filter =
 
 let main fd =
   lwt () = Lwt_log.notice "starting up" in
-  Milter.setdbg (Milter_config.log_level milter_config);
+  Milter.setdbg (Milter_config.debug_level milter_config);
   Milter.setconn (snd (Milter_config.listen_address milter_config));
   Milter.register filter;
   Milter.main ();
