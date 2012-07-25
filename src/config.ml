@@ -178,6 +178,9 @@ let is_milter conf =
 let user c =
   c.user
 
+let binary_path c =
+  c.binary_path
+
 let log_level c =
   c.log_level
 

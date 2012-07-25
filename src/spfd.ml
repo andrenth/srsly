@@ -11,7 +11,7 @@ let spf_ipc_handler fd = return ()
 let slaves =
   List.map
     (fun bin ->
-      let exec =  sprintf "%s/_build/src/%s" (Unix.getcwd ()) bin in
+      let exec =  sprintf "%s/%s" (Config.binary_path config) bin in
       (exec, spf_ipc_handler, 1))
     (if Config.is_milter config then milter_slaves else policyd_slaves)
 
