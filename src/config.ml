@@ -34,8 +34,8 @@ let log_levels =
 let socket_string = function
   | `Str s ->
       if Str.string_match (Str.regexp "^\\(unix\\|local\\):\\(.+\\)") s 0 then
-        existing_basename (`Str (Str.matched_group 1 s))
-      else if Str.string_match (Str.regexp "^(inet6?:[0-9]+@\\(.+\\)") s 0 then
+        existing_dirname (`Str (Str.matched_group 1 s))
+      else if Str.string_match (Str.regexp "^inet6?:[0-9]+@\\(.+\\)") s 0 then
         try
           ignore (Unix.gethostbyname (Str.matched_group 1 s));
           `Valid
@@ -48,7 +48,7 @@ let socket_string = function
 
 let spec =
   [ `Global
-      [ `Optional ("lock_file", existing_basename)
+      [ `Optional ("lock_file", existing_dirname)
       ; `Optional ("user", existing_user)
       ; `Optional ("binary_path", existing_directory)
       ; `Optional ("log_level", one_of_strings log_levels)
