@@ -10,4 +10,4 @@ runtest() {
   echo "$1" | grep -q "$2"
 }
 
-CONNSPEC=inet:9999@localhost
+CONNSPEC=inet:8387@localhost
