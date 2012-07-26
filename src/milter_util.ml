@@ -31,6 +31,25 @@ let with_priv_data z ctx f =
 let log f fmt =
   ksprintf (fun s -> ignore (f s)) fmt
 
+let canonicalize a =
+  let e = String.length a - 1 in
+  let a = if a.[0] = '<' && a.[e] = '>' then String.sub a 1 (e-1) else a in
+  let a = if a.[0] = '"' && a.[e] = '"' then String.sub a 1 (e-1) else a in
+  let e = String.length a - 1 in
+  try
+    let t = String.rindex a '@' in
+    let u = String.sub a 0 (t) in
+    let d = String.sub a (t+1) (e-t) in
+    let u = if u.[0] = '"' && u.[t-1] = '"' then String.sub u 1 (t-2) else u in
+    try
+      let v = String.rindex u ':' in
+      let u = String.sub u (v+1) (String.length u - v - 1) in
+      u ^ "@" ^ d
+    with Not_found ->
+      u ^ "@" ^ d
+  with Not_found ->
+    a
+
 let debug fmt = log Lwt_log.debug fmt
 let notice fmt = log Lwt_log.notice fmt
 let info fmt = log Lwt_log.info fmt

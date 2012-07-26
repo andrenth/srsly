@@ -38,7 +38,7 @@ let envfrom ctx from args =
         let myhostname = Milter.getsymval ctx "j" in
         match srs_domain <|> myhostname with
         | Some alias ->
-            let signed_from = SRS.forward srs from alias in
+            let signed_from = SRS.forward srs (canonicalize from) alias in
             { signed_from = Some signed_from }, Milter.Continue
         | None ->
             priv, Milter.Tempfail)

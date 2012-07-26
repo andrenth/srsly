@@ -31,25 +31,6 @@ let unbox_spf = function
   | `Error e -> failwith (sprintf "error: %s" e)
   | `Response r -> r
 
-let canonicalize a =
-  let e = String.length a - 1 in
-  let a = if a.[0] = '<' && a.[e] = '>' then String.sub a 1 (e-1) else a in
-  let a = if a.[0] = '"' && a.[e] = '"' then String.sub a 1 (e-1) else a in
-  let e = String.length a - 1 in
-  try
-    let t = String.rindex a '@' in
-    let u = String.sub a 0 (t) in
-    let d = String.sub a (t+1) (e-t) in
-    let u = if u.[0] = '"' && u.[t-1] = '"' then String.sub u 1 (t-2) else u in
-    try
-      let v = String.rindex u ':' in
-      let u = String.sub u (v+1) (String.length u - v - 1) in
-      u ^ "@" ^ d
-    with Not_found ->
-      u ^ "@" ^ d
-  with Not_found ->
-    a
-
 let milter_reject ctx msg =
   Milter.setreply ctx "550" (Some "5.7.1") (Some msg);
   Milter.Reject
