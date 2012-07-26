@@ -18,9 +18,20 @@ type priv =
 let config = Config.configuration
 let milter_config = Config.milter_config config
 
+let read_srs_secrets () = 
+  let secrets = ref [] in
+  let ch = open_in (Milter_config.srs_secret_file milter_config) in
+  (try
+    while true; do
+      secrets := input_line ch :: !secrets
+    done
+  with End_of_file ->
+    close_in ch);
+  List.rev !secrets
+
 let spf = SPF.server SPF.Dns_cache
 let srs = SRS.make
-            (Milter_config.srs_secret milter_config)
+            (read_srs_secrets ())
             (Milter_config.srs_hash_max_age milter_config)
             (Milter_config.srs_hash_length milter_config)
             (Milter_config.srs_separator milter_config)

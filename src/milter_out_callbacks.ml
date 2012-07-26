@@ -14,8 +14,14 @@ type priv =
 let config = Config.configuration
 let milter_config = Config.milter_config config
 
+let read_srs_secret () =
+  let ch = open_in (Milter_config.srs_secret_file milter_config) in
+  let line = input_line ch in
+  close_in ch;
+  line
+
 let srs = SRS.make
-            (Milter_config.srs_secret milter_config)
+            [read_srs_secret ()]
             (Milter_config.srs_hash_max_age milter_config)
             (Milter_config.srs_hash_length milter_config)
             (Milter_config.srs_separator milter_config)

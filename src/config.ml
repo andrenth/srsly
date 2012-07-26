@@ -20,7 +20,7 @@ type t =
 
 let file =
   if Array.length Sys.argv > 1 then Sys.argv.(1)
-  else "/etc/spfd.conf"
+  else "/etc/spfd/spfd.conf"
 
 let log_levels =
   [ "debug"
@@ -46,31 +46,38 @@ let socket_string = function
   | _ ->
       invalid_arg "socket_string: not a string"
 
+let secure_secret_file =
+  [ file_with_mode 0o600
+  ; file_with_owner "root"
+  ; file_with_group "root"
+  ; nonempty_file
+  ]
+
 let spec =
   [ `Global
-      [ `Optional ("lock_file", existing_dirname)
-      ; `Optional ("user", existing_user)
-      ; `Optional ("binary_path", existing_directory)
-      ; `Optional ("log_level", one_of_strings log_levels)
-      ; `Optional ("fail_on_helo_temperror", bool)
-      ; `Optional ("local_whitelist", string)
-      ; `Optional ("relay_whitelist", string)
+      [ `Optional ("lock_file",              [existing_dirname])
+      ; `Optional ("user",                   [unprivileged_user])
+      ; `Optional ("binary_path",            [existing_directory])
+      ; `Optional ("log_level",              [string_in log_levels])
+      ; `Optional ("fail_on_helo_temperror", [bool])
+      ; `Optional ("local_whitelist",        [string])
+      ; `Optional ("relay_whitelist",        [string])
       ]
 
   ; `Optional ("policyd",
-      [ `Required ("listen_address", socket_string)
-      ; `Optional ("num_slaves", int)
+      [ `Required ("listen_address", [socket_string])
+      ; `Optional ("num_slaves",     [int])
       ])
 
   ; `Optional ("milter",
-      [ `Required ("listen_address_in", socket_string)
-      ; `Required ("listen_address_out", socket_string)
-      ; `Optional ("srs_domain", string)
-      ; `Required ("srs_secret", string)
-      ; `Optional ("srs_hash_max_age", int)
-      ; `Optional ("srs_hash_length", int)
-      ; `Optional ("srs_hash_separator", one_of_strings ["+"; "-"; "="])
-      ; `Optional ("debug_level", int_in_range (0, 6))
+      [ `Required ("listen_address_in",  [socket_string])
+      ; `Required ("listen_address_out", [socket_string])
+      ; `Optional ("srs_domain",         [string])
+      ; `Required ("srs_secret_file",    secure_secret_file)
+      ; `Optional ("srs_hash_max_age",   [int])
+      ; `Optional ("srs_hash_length",    [int])
+      ; `Optional ("srs_hash_separator", [string_in ["+"; "-"; "="]])
+      ; `Optional ("debug_level",        [int_in_range (0, 6)])
       ])
   ]
 

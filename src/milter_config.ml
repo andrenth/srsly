@@ -5,7 +5,7 @@ type t =
   { debug_level      : int
   ; listen_address   : string * string
   ; srs_domain       : string option
-  ; srs_secret       : string
+  ; srs_secret_file  : Lwt_io.file_name
   ; srs_hash_max_age : int
   ; srs_hash_length  : int 
   ; srs_separator    : char
@@ -26,7 +26,7 @@ let of_configuration conf =
   let listen_address_in = string_value (get_req conf "listen_address_in") in
   let listen_address_out = string_value (get_req conf "listen_address_out") in
   let srs_domain = map_opt string_value (get conf "srs_domain") in
-  let srs_secret = string_value (get_req conf "srs_secret") in
+  let srs_secret_file = string_value (get_req conf "srs_secret_file") in
   let srs_hash_max_age =
     default srs_hash_max_age int_value (get conf "srs_hash_max_age") in
   let srs_hash_length =
@@ -40,7 +40,7 @@ let of_configuration conf =
   { debug_level      = debug_level
   ; listen_address   = listen_address_in, listen_address_out
   ; srs_domain       = srs_domain
-  ; srs_secret       = srs_secret
+  ; srs_secret_file  = srs_secret_file
   ; srs_hash_max_age = srs_hash_max_age
   ; srs_hash_length  = srs_hash_length 
   ; srs_separator    = srs_hash_separator
@@ -52,8 +52,8 @@ let listen_address c =
 let srs_domain c =
   c.srs_domain
 
-let srs_secret c =
-  c.srs_secret
+let srs_secret_file c =
+  c.srs_secret_file
 
 let srs_hash_max_age c =
   c.srs_hash_max_age
