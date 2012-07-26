@@ -21,7 +21,7 @@ let listen_socket = "/tmp/spf.socket"
 
 let () =
   Release.master_slaves
-    ~background:false
+    ~background:(Config.background config)
     ~syslog:false
     ~lock_file:lock_file
     ~slaves:slaves

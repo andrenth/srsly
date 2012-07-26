@@ -11,6 +11,7 @@ type t =
   { lock_file              : Lwt_io.file_name
   ; user                   : string
   ; binary_path            : Lwt_io.file_name
+  ; background             : bool
   ; log_level              : Lwt_log.level
   ; fail_on_helo_temperror : bool
   ; local_whitelist        : Network.t list
@@ -62,6 +63,7 @@ let spec =
       ; `Optional ("fail_on_helo_temperror", [bool])
       ; `Optional ("local_whitelist",        [string])
       ; `Optional ("relay_whitelist",        [string])
+      ; `Optional ("background",             [bool])
       ]
 
   ; `Optional ("policyd",
@@ -119,6 +121,7 @@ let make conf =
   let lock_file = default lock_file string_value (get conf "lock_file") in
   let user = default user string_value (get conf "user") in
   let binary_path = default binary_path string_value (get conf "binary_path") in
+  let background = default true bool_value (get conf "background") in
   let log_level =
     default log_level
       (fun l -> log_level_of_string (string_value l))
@@ -143,6 +146,7 @@ let make conf =
   { lock_file              = lock_file
   ; user                   = user
   ; binary_path            = binary_path
+  ; background             = background
   ; log_level              = log_level
   ; fail_on_helo_temperror = fail_on_helo_temperror
   ; local_whitelist        = local_whitelist
@@ -199,3 +203,6 @@ let relay_whitelist c =
 
 let fail_on_helo_temperror c =
   c.fail_on_helo_temperror
+
+let background c =
+  c.background
