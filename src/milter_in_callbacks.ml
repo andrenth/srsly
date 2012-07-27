@@ -95,7 +95,7 @@ let milter_add_header ctx header =
   let sep = String.index header ':' in
   let field = String.sub header 0 sep in
   let value = String.sub header (sep + 2) (String.length header - sep - 2) in
-  Milter.addheader ctx field value
+  Milter.insheader ctx 1 field value
 
 let whitelist s =
   Whitelisted s
