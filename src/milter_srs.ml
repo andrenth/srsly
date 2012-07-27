@@ -5,11 +5,19 @@ let srs = ref None
 let make_srs () =
   let config = Config.milter () in
   let read_srs_secrets () = 
+    let secret = ref "" in
     let secrets = ref [] in
     let ch = open_in (Milter_config.srs_secret_file config) in
-    (try while true; do secrets := input_line ch :: !secrets done
+    let first = ref true in
+    (try while true do
+      if !first then begin
+        secret := input_line ch;
+        first := false
+      end else
+        secrets := input_line ch :: !secrets
+    done
     with End_of_file -> close_in ch);
-    List.rev !secrets in
+    !secret, List.rev !secrets in
   SRS.make
     (read_srs_secrets ())
     (Milter_config.srs_hash_max_age config)
