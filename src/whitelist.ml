@@ -13,17 +13,15 @@ let check_networks networks msg addr =
           check rest in
   check networks
 
-let config = Config.configuration
-
 let check_local addr =
   check_networks
-    (Config.local_whitelist config)
+    (Config.local_whitelist ())
     "SPF not applicable to localhost connection - skipped check"    
     addr
 
 let check_relay addr =
   check_networks
-    (Config.relay_whitelist config)
+    (Config.relay_whitelist ())
     "SPF skipped for whitelisted relay"
     addr
 

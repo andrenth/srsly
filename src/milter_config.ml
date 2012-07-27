@@ -46,8 +46,11 @@ let of_configuration conf =
   ; srs_separator    = srs_hash_separator
   }
 
-let listen_address c =
-  c.listen_address
+let listen_address_in c =
+  fst c.listen_address
+
+let listen_address_out c =
+  snd c.listen_address
 
 let srs_domain c =
   c.srs_domain

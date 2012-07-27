@@ -1,9 +1,6 @@
 open Lwt
 open Printf
 
-let config = Config.configuration
-let policyd_config = Config.policyd_config config
-
 let set_log_level level =
   Lwt_log.Section.set_level Lwt_log.Section.main level
 
@@ -11,7 +8,7 @@ let handle_sigterm _ =
   let log_t =
     Lwt_log.notice "got sigterm" in
   let cleanup_t =
-    let addr = Policyd_config.listen_address policyd_config in
+    let addr = Policyd_config.listen_address (Config.policyd ()) in
     let re = Str.regexp "^unix:\\(.+\\)$" in
     if Str.string_match re addr 0 then
       Lwt_unix.unlink (Str.matched_group 1 addr)
@@ -51,9 +48,9 @@ let main fd =
   Release_socket.accept_loop
     ~timeout:30.0 (* DNS lookup may be slow *)
     Lwt_unix.SOCK_STREAM
-    (parse_sockaddr (Policyd_config.listen_address policyd_config))
+    (parse_sockaddr (Policyd_config.listen_address (Config.policyd ())))
     spf_handler
 
 let () =
-  set_log_level (Config.log_level config);
-  Release.me ~syslog:false ~user:(Config.user config) ~main:main ()
+  set_log_level (Config.log_level ());
+  Release.me ~syslog:false ~user:(Config.user ()) ~main:main ()

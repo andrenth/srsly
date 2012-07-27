@@ -162,7 +162,7 @@ let validate conf =
     exit 1
   end
 
-let configuration =
+let read () =
   match Release_config.parse file spec with
   | `Configuration conf ->
       validate conf;
@@ -181,28 +181,39 @@ let policyd_config conf =
   | Policyd p -> p
   | Milter _ -> invalid_arg "policyd_config"
 
-let is_milter conf =
-  match conf.slave with
+let configuration = ref (read ())
+
+let global () =
+  !configuration
+
+let milter () =
+  milter_config !configuration
+
+let policyd () =
+  policyd_config !configuration
+
+let is_milter () =
+  match !configuration.slave with
   | Milter _ -> true
   | Policyd _ -> false
 
-let user c =
-  c.user
+let user () =
+  !configuration.user
 
-let binary_path c =
-  c.binary_path
+let binary_path () =
+  !configuration.binary_path
 
-let log_level c =
-  c.log_level
+let log_level () =
+  !configuration.log_level
 
-let local_whitelist c =
-  c.local_whitelist
+let local_whitelist () =
+  !configuration.local_whitelist
 
-let relay_whitelist c =
-  c.relay_whitelist
+let relay_whitelist () =
+  !configuration.relay_whitelist
 
-let fail_on_helo_temperror c =
-  c.fail_on_helo_temperror
+let fail_on_helo_temperror () =
+  !configuration.fail_on_helo_temperror
 
-let background c =
-  c.background
+let background () =
+  !configuration.background

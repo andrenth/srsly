@@ -11,20 +11,17 @@ type result
 type priv =
   { signed_from : string option }
 
-let config = Config.configuration
-let milter_config = Config.milter_config config
-
 let read_srs_secret () =
-  let ch = open_in (Milter_config.srs_secret_file milter_config) in
+  let ch = open_in (Milter_config.srs_secret_file (Config.milter ())) in
   let line = input_line ch in
   close_in ch;
   line
 
 let srs = SRS.make
             [read_srs_secret ()]
-            (Milter_config.srs_hash_max_age milter_config)
-            (Milter_config.srs_hash_length milter_config)
-            (Milter_config.srs_separator milter_config)
+            (Milter_config.srs_hash_max_age (Config.milter ()))
+            (Milter_config.srs_hash_length (Config.milter ()))
+            (Milter_config.srs_separator (Config.milter ()))
 
 
 (* Callbacks *)
@@ -40,7 +37,7 @@ let envfrom ctx from args =
   else
     with_priv_data Milter.Tempfail ctx
       (fun priv ->
-        let srs_domain = Milter_config.srs_domain milter_config in
+        let srs_domain = Milter_config.srs_domain (Config.milter ()) in
         let myhostname = Milter.getsymval ctx "j" in
         match srs_domain <|> myhostname with
         | Some alias ->

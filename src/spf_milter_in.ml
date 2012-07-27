@@ -1,9 +1,6 @@
 open Lwt
 open Printf
 
-let config = Config.configuration
-let milter_config = Config.milter_config config
-
 let set_log_level level =
   Lwt_log.Section.set_level Lwt_log.Section.main level
 
@@ -28,12 +25,12 @@ let filter =
 
 let main fd =
   lwt () = Lwt_log.notice "starting up" in
-  Milter.setdbg (Milter_config.debug_level milter_config);
-  Milter.setconn (fst (Milter_config.listen_address milter_config));
+  Milter.setdbg (Milter_config.debug_level (Config.milter ()));
+  Milter.setconn (Milter_config.listen_address_in (Config.milter ()));
   Milter.register filter;
   Milter.main ();
   return ()
 
 let () =
-  set_log_level (Config.log_level config);
-  Release.me ~syslog:false ~user:(Config.user config) ~main:main ()
+  set_log_level (Config.log_level ());
+  Release.me ~syslog:false ~user:(Config.user ()) ~main:main ()
