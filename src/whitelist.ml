@@ -1,7 +1,5 @@
 open Util
 
-type result = string option
-
 let check_networks networks msg addr =
   let rec check = function
     | [] ->
