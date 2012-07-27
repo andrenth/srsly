@@ -1,4 +1,7 @@
+open Lwt
 open Printf
+open Ipc.Slave_types
+open Util
 
 module SetOfList = struct
   module type S = sig
@@ -63,6 +66,29 @@ let make_srs () =
     (Milter_config.srs_hash_max_age config)
     (Milter_config.srs_hash_length config)
     (Milter_config.srs_separator config)
+
+let handle_ipc_response = function
+  | Configuration c ->
+      Config.replace c;
+      set_log_level (Config.log_level ());
+        Sys.argv.(0) (Milter_config.debug_level (Config.milter ()));
+      Milter.setdbg (Milter_config.debug_level (Config.milter ()))
+
+let rec ipc_reader fd =
+  lwt () = match_lwt Ipc.Slave.read_response fd with
+  | `Response r -> return (handle_ipc_response r)
+  | `EOF -> Lwt_log.error "EOF on IPC socket" >> exit 1
+  | `Timeout -> Lwt_log.error "timeout on IPC socket" in
+  ipc_reader fd
+
+let main filter listen_addr fd =
+  lwt () = Lwt_log.notice "starting up" in
+  let ipc_read_t = ipc_reader fd in
+  Milter.setdbg (Milter_config.debug_level (Config.milter ()));
+  Milter.setconn listen_addr;
+  Milter.register filter;
+  Milter.main ();
+  Lwt.join [ipc_read_t]
 
 let debug fmt = log Lwt_log.debug fmt
 let notice fmt = log Lwt_log.notice fmt

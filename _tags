@@ -87,3 +87,4 @@
 <src/spfd.ml>: syntax_camlp4o
 <src/spf_policyd.ml>: syntax_camlp4o
 <src/spf_milter_*.ml>: syntax_camlp4o
+<src/milter_util.ml>: syntax_camlp4o

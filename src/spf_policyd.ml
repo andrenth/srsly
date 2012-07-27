@@ -1,8 +1,7 @@
 open Lwt
 open Printf
-
-let set_log_level level =
-  Lwt_log.Section.set_level Lwt_log.Section.main level
+open Ipc.Slave_types
+open Util
 
 let handle_sigterm _ =
   let log_t =
@@ -43,8 +42,21 @@ let parse_sockaddr s =
   else
     invalid_arg (sprintf "parse_sockaddr: %s" s)
 
+let handle_ipc_response = function
+  | Configuration c ->
+      Config.replace c;
+      set_log_level (Config.log_level ())
+
+let rec ipc_reader fd =
+  lwt () = match_lwt Ipc.Slave.read_response fd with
+  | `Response r -> return (handle_ipc_response r)
+  | `EOF -> Lwt_log.error "EOF on IPC socket" >> exit 1
+  | `Timeout -> Lwt_log.error "timeout on IPC socket" in
+  ipc_reader fd
+
 let main fd =
   ignore (Lwt_unix.on_signal Sys.sigterm handle_sigterm);
+  let _ipc_read_t = ipc_reader fd in
   Release_socket.accept_loop
     ~timeout:30.0 (* DNS lookup may be slow *)
     Lwt_unix.SOCK_STREAM

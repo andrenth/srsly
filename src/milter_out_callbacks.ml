@@ -11,7 +11,10 @@ type result
 type priv =
   { signed_from : string option }
 
-let srs = ref (make_srs ())
+let srs = ref None
+
+let init () =
+  srs := Some (make_srs ())
 
 (* Callbacks *)
 
@@ -30,7 +33,8 @@ let envfrom ctx from args =
         let myhostname = Milter.getsymval ctx "j" in
         match srs_domain <|> myhostname with
         | Some alias ->
-            let signed_from = SRS.forward !srs (canonicalize from) alias in
+            let canon = canonicalize from in
+            let signed_from = SRS.forward (some !srs) canon alias in
             { signed_from = Some signed_from }, Milter.Continue
         | None ->
             priv, Milter.Tempfail)

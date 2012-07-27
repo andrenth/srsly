@@ -67,27 +67,24 @@ let spec =
       ]
 
   ; `Optional ("policyd",
-      [ `Required ("listen_address", [socket_string])
-      ; `Optional ("num_slaves",     [int])
+      [ `Required ("listen_address",         [socket_string])
+      ; `Optional ("num_slaves",             [int])
       ])
 
   ; `Optional ("milter",
-      [ `Required ("listen_address_in",  [socket_string])
-      ; `Required ("listen_address_out", [socket_string])
-      ; `Optional ("srs_domain",         [string])
-      ; `Required ("srs_secret_file",    secure_secret_file)
-      ; `Optional ("srs_hash_max_age",   [int])
-      ; `Optional ("srs_hash_length",    [int])
-      ; `Optional ("srs_hash_separator", [string_in ["+"; "-"; "="]])
-      ; `Optional ("debug_level",        [int_in_range (0, 6)])
+      [ `Required ("listen_address_in",      [socket_string])
+      ; `Required ("listen_address_out",     [socket_string])
+      ; `Optional ("srs_domain",             [string])
+      ; `Required ("srs_secret_file",        secure_secret_file)
+      ; `Optional ("srs_hash_max_age",       [int])
+      ; `Optional ("srs_hash_length",        [int])
+      ; `Optional ("srs_hash_separator",     [string_in ["+"; "-"; "="]])
+      ; `Optional ("debug_level",            [int_in_range (0, 6)])
       ])
   ]
 
-let get conf key =
+let find key conf =
   Release_config.get conf key () 
-
-let get_req conf key =
-  Release_config.get_exn conf key () 
 
 let log_level_of_string = function
   | "debug" -> Lwt_log.Debug
@@ -117,32 +114,32 @@ let fail_on_helo_temperror = true
 let local_whitelist = default_local_addresses
 let relay_whitelist = default_relay_addresses
 
-let make conf =
-  let lock_file = default lock_file string_value (get conf "lock_file") in
-  let user = default user string_value (get conf "user") in
-  let binary_path = default binary_path string_value (get conf "binary_path") in
-  let background = default true bool_value (get conf "background") in
+let make c =
+  let lock_file = default lock_file string_value (find "lock_file" c) in
+  let user = default user string_value (find "user" c) in
+  let binary_path = default binary_path string_value (find "binary_path" c) in
+  let background = default true bool_value (find "background" c) in
   let log_level =
     default log_level
       (fun l -> log_level_of_string (string_value l))
-      (get conf "log_level") in
+      (find "log_level" c) in
   let fail_on_helo_temperror =
     default fail_on_helo_temperror
       bool_value
-      (get conf "fail_on_helo_temperror") in
+      (find "fail_on_helo_temperror" c) in
   let local_whitelist =
     default local_whitelist
       (fun w -> whitelist_of_string (string_value w))
-      (get conf "local_whitelist") in
+      (find "local_whitelist" c) in
   let relay_whitelist =
     default relay_whitelist
       (fun w -> whitelist_of_string (string_value w))
-      (get conf "relay_whitelist") in
+      (find "relay_whitelist" c) in
   let slave_config =
-    if Release_config.has_section conf "milter" then
-      Milter (Milter_config.of_configuration conf)
+    if Release_config.has_section c "milter" then
+      Milter (Milter_config.of_configuration c)
     else
-      Policyd (Policyd_config.of_configuration conf) in
+      Policyd (Policyd_config.of_configuration c) in
   { lock_file              = lock_file
   ; user                   = user
   ; binary_path            = binary_path
@@ -181,39 +178,57 @@ let policyd_config conf =
   | Policyd p -> p
   | Milter _ -> invalid_arg "policyd_config"
 
-let configuration = ref (read ())
+let configuration = ref None
 
-let global () =
-  !configuration
+let current () =
+  match !configuration with
+  | None ->
+      let c = read () in
+      configuration := Some c;
+      c
+  | Some c ->
+      c
 
 let milter () =
-  milter_config !configuration
+  milter_config (current ())
 
 let policyd () =
-  policyd_config !configuration
+  policyd_config (current ())
+
+let reload () =
+  configuration := Some (read ())
+
+let replace c =
+  configuration := Some c
 
 let is_milter () =
-  match !configuration.slave with
+  match (current ()).slave with
   | Milter _ -> true
   | Policyd _ -> false
 
+let serialize c =
+  Marshal.to_string c []
+
+let unserialize s i =
+  (Marshal.from_string s i : t)
+
 let user () =
-  !configuration.user
+  (current ()).user
 
 let binary_path () =
-  !configuration.binary_path
+  (current ()).binary_path
 
 let log_level () =
-  !configuration.log_level
+  (current ()).log_level
 
 let local_whitelist () =
-  !configuration.local_whitelist
+  (current ()).local_whitelist
 
 let relay_whitelist () =
-  !configuration.relay_whitelist
+  (current ()).relay_whitelist
 
 let fail_on_helo_temperror () =
-  !configuration.fail_on_helo_temperror
+  (current ()).fail_on_helo_temperror
 
 let background () =
-  !configuration.background
+  (current ()).background

@@ -39,3 +39,6 @@ let applyn f x n =
     | 0 -> z
     | k -> apply (f z) (k - 1) in
   apply x n
+
+let set_log_level level =
+  Lwt_log.Section.set_level Lwt_log.Section.main level
