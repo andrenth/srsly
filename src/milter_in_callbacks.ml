@@ -15,23 +15,8 @@ type priv =
   ; result    : result
   }
 
-let read_srs_secrets () = 
-  let secrets = ref [] in
-  let ch = open_in (Milter_config.srs_secret_file (Config.milter ())) in
-  (try
-    while true; do
-      secrets := input_line ch :: !secrets
-    done
-  with End_of_file ->
-    close_in ch);
-  List.rev !secrets
-
 let spf = SPF.server SPF.Dns_cache
-let srs = SRS.make
-            (read_srs_secrets ())
-            (Milter_config.srs_hash_max_age (Config.milter ()))
-            (Milter_config.srs_hash_length (Config.milter ()))
-            (Milter_config.srs_separator (Config.milter ()))
+let srs = ref (make_srs ())
 
 let srs_re = Str.regexp "^SRS\\([01]\\)[=+-]"
 
@@ -147,7 +132,7 @@ let envrcpt ctx rcpt args =
         debug "got an SRS-signed bounce";
         try
           let n = 1 + int_of_string (Str.matched_group 1 rcpt) in
-          let rev_rcpt = applyn (SRS.reverse srs) (canonicalize rcpt) n in
+          let rev_rcpt = applyn (SRS.reverse !srs) (canonicalize rcpt) n in
           debug "SRS-reversed address for '%s': '%s'" rcpt rev_rcpt;
           { priv with rcpt = Some (rcpt, rev_rcpt) }, Milter.Continue
         with SRS.SRS_error s ->

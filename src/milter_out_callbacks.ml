@@ -11,18 +11,7 @@ type result
 type priv =
   { signed_from : string option }
 
-let read_srs_secret () =
-  let ch = open_in (Milter_config.srs_secret_file (Config.milter ())) in
-  let line = input_line ch in
-  close_in ch;
-  line
-
-let srs = SRS.make
-            [read_srs_secret ()]
-            (Milter_config.srs_hash_max_age (Config.milter ()))
-            (Milter_config.srs_hash_length (Config.milter ()))
-            (Milter_config.srs_separator (Config.milter ()))
-
+let srs = ref (make_srs ())
 
 (* Callbacks *)
 
@@ -41,7 +30,7 @@ let envfrom ctx from args =
         let myhostname = Milter.getsymval ctx "j" in
         match srs_domain <|> myhostname with
         | Some alias ->
-            let signed_from = SRS.forward srs (canonicalize from) alias in
+            let signed_from = SRS.forward !srs (canonicalize from) alias in
             { signed_from = Some signed_from }, Milter.Continue
         | None ->
             priv, Milter.Tempfail)
