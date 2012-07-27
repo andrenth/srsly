@@ -24,3 +24,6 @@ let of_configuration conf =
 
 let listen_address c =
   c.listen_address
+
+let num_slaves c =
+  c.num_slaves
