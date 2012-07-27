@@ -8,9 +8,9 @@ let spf_ipc_handler fd = return ()
 
 let slaves =
   List.map
-    (fun bin ->
-      let exec =  sprintf "%s/%s" (Config.binary_path ()) bin in
-      (exec, spf_ipc_handler, 1))
+    (fun slave ->
+      let path = sprintf "%s/%s" (Config.binary_path ()) slave in
+      (path, spf_ipc_handler, 1))
     (if Config.is_milter () then milter_slaves else policyd_slaves)
 
 let lock_file = "/tmp/spfd.pid"
