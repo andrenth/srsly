@@ -53,26 +53,13 @@ let canonicalize a =
   with Not_found ->
     a
 
-let make_srs () =
-  let config = Config.milter () in
-  let read_srs_secrets () = 
-    let secrets = ref [] in
-    let ch = open_in (Milter_config.srs_secret_file config) in
-    (try while true; do secrets := input_line ch :: !secrets done
-    with End_of_file -> close_in ch);
-    List.rev !secrets in
-  SRS.make
-    (read_srs_secrets ())
-    (Milter_config.srs_hash_max_age config)
-    (Milter_config.srs_hash_length config)
-    (Milter_config.srs_separator config)
-
 let handle_ipc_response = function
   | Configuration c ->
       Config.replace c;
       set_log_level (Config.log_level ());
-        Sys.argv.(0) (Milter_config.debug_level (Config.milter ()));
       Milter.setdbg (Milter_config.debug_level (Config.milter ()))
+  | Reload_srs_secrets ->
+      Milter_srs.reload ()
 
 let rec ipc_reader fd =
   lwt () = match_lwt Ipc.Slave.read_response fd with

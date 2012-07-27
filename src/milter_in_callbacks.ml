@@ -16,10 +16,6 @@ type priv =
   }
 
 let spf = SPF.server SPF.Dns_cache
-let srs = ref None
-
-let init () =
-  srs := Some (make_srs ())
 
 let srs_re = Str.regexp "^SRS\\([01]\\)[=+-]"
 
@@ -135,8 +131,8 @@ let envrcpt ctx rcpt args =
         debug "got an SRS-signed bounce";
         try
           let n = 1 + int_of_string (Str.matched_group 1 rcpt) in
-          let canon = canonicalize rcpt in
-          let rev_rcpt = applyn (SRS.reverse (some !srs)) canon n in
+          let srs = Milter_srs.current () in
+          let rev_rcpt = applyn (SRS.reverse srs) (canonicalize rcpt) n in
           debug "SRS-reversed address for '%s': '%s'" rcpt rev_rcpt;
           { priv with rcpt = Some (rcpt, rev_rcpt) }, Milter.Continue
         with SRS.SRS_error s ->

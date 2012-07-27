@@ -2,7 +2,9 @@ open Printf
 
 module Slave_types = struct
   type request
-  type response = Configuration of Config.t
+  type response
+    = Configuration of Config.t
+    | Reload_srs_secrets
 end
 
 module Slave_ops = struct
@@ -13,10 +15,12 @@ module Slave_ops = struct
 
   let string_of_response = function
     | Configuration c -> sprintf "C:%s" (Config.serialize c)
+    | Reload_srs_secrets -> "R"
 
   let response_of_string s =
     match s.[0] with
     | 'C' -> Configuration (Config.unserialize s 2)
+    | 'R' -> Reload_srs_secrets
     | other -> failwith "unexpected response: '%c'" other
 end
 

@@ -17,12 +17,20 @@ let reload_config () =
     Ipc.Slave.write_response fd (Configuration (Config.current ())) in
   Lwt_list.iter_p send_configuration_to_slave (!slave_connections ())
 
+let reload_srs_secrets () =
+  let send_srs_reload_to_slave fd =
+    Ipc.Slave.write_response fd Reload_srs_secrets in
+  Lwt_list.iter_p send_srs_reload_to_slave (!slave_connections ())
+
 let handle_sigterm _ =
-  ignore_result (Lwt_log.notice "got sigterm, exiting");
+  ignore_result (Lwt_log.notice "got SIGTERM, exiting");
   exit 0
 
 let handle_sighup _ =
-  ignore_result (Lwt_log.notice "got sighup" >> reload_config ())
+  ignore_result (Lwt_log.notice "got SIGHUP" >> reload_config ())
+
+let handle_sigusr1 _ =
+  ignore_result (Lwt_log.notice "got SIGUSR1" >> reload_srs_secrets ())
 
 let lock_file = "/tmp/spfd.pid"
 let num_slaves = 4
