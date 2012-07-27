@@ -21,7 +21,7 @@ type t =
 
 let file =
   if Array.length Sys.argv > 1 then Sys.argv.(1)
-  else "/etc/spfd/spfd.conf"
+  else "/etc/srslyd/srslyd.conf"
 
 let log_levels =
   [ "debug"
@@ -106,9 +106,9 @@ let default_local_addresses =
 
 let default_relay_addresses = []
 
-let lock_file = "/var/run/spfd/spfd.pid"
-let user = "spfd"
-let binary_path = "/usr/lib/spfd"
+let lock_file = "/var/run/srslyd/srslyd.pid"
+let user = "srslyd"
+let binary_path = "/usr/lib/srslyd"
 let log_level = Lwt_log.Notice
 let fail_on_helo_temperror = true
 let local_whitelist = default_local_addresses

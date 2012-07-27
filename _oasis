@@ -1,14 +1,14 @@
 OASISFormat: 0.2
-Name:        spfd
+Name:        srsly
 Version:     0.1.0
 Synopsis:    SPF daemon
 Authors:     Andre Nathan
 License:     BSD3
 
-Executable "spfd"
+Executable "srslyd"
   Path:            src
   BuildTools:      ocamlbuild
-  MainIs:          spfd.ml
+  MainIs:          srslyd.ml
   Install:         true
   CompiledObject:  best
   BuildDepends:    str,
@@ -20,10 +20,10 @@ Executable "spfd"
                    lwt.unix,
                    lwt.syntax
 
-Executable "spf-policyd"
+Executable "srsly-policyd"
   Path:            src
   BuildTools:      ocamlbuild
-  MainIs:          spf_policyd.ml
+  MainIs:          srsly_policyd.ml
   Install:         true
   CompiledObject:  best
   BuildDepends:    spf,
@@ -39,10 +39,10 @@ Executable "spf-policyd"
                    lwt.syntax,
                    lwt.preemptive
 
-Executable "spf-milter-in"
+Executable "srsly-milter-in"
   Path:            src
   BuildTools:      ocamlbuild
-  MainIs:          spf_milter_in.ml
+  MainIs:          srsly_milter_in.ml
   Install:         true
   CompiledObject:  best
   BuildDepends:    milter,
@@ -60,10 +60,10 @@ Executable "spf-milter-in"
                    lwt.syntax,
                    lwt.preemptive
 
-Executable "spf-milter-out"
+Executable "srsly-milter-out"
   Path:            src
   BuildTools:      ocamlbuild
-  MainIs:          spf_milter_out.ml
+  MainIs:          srsly_milter_out.ml
   Install:         true
   CompiledObject:  best
   BuildDepends:    milter,

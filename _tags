@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 6a055e5aa98ef5d843e9bfc871122e4c)
+# DO NOT EDIT (digest: ffd88bdfdcd2f120b90896c9a06339c1)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -13,58 +13,58 @@
 ".git": not_hygienic
 "_darcs": -traverse
 "_darcs": not_hygienic
-# Executable spfd
-<src/spfd.{native,byte}>: pkg_str
-<src/spfd.{native,byte}>: pkg_uint.uint32
-<src/spfd.{native,byte}>: pkg_uint.uint128
-<src/spfd.{native,byte}>: pkg_release
-<src/spfd.{native,byte}>: pkg_release.config
-<src/spfd.{native,byte}>: pkg_lwt
-<src/spfd.{native,byte}>: pkg_lwt.unix
-<src/spfd.{native,byte}>: pkg_lwt.syntax
-# Executable spf-policyd
-<src/spf_policyd.{native,byte}>: pkg_spf
-<src/spf_policyd.{native,byte}>: pkg_str
-<src/spf_policyd.{native,byte}>: pkg_unix
-<src/spf_policyd.{native,byte}>: pkg_threads
-<src/spf_policyd.{native,byte}>: pkg_uint.uint32
-<src/spf_policyd.{native,byte}>: pkg_uint.uint128
-<src/spf_policyd.{native,byte}>: pkg_release
-<src/spf_policyd.{native,byte}>: pkg_release.config
-<src/spf_policyd.{native,byte}>: pkg_lwt
-<src/spf_policyd.{native,byte}>: pkg_lwt.unix
-<src/spf_policyd.{native,byte}>: pkg_lwt.syntax
-<src/spf_policyd.{native,byte}>: pkg_lwt.preemptive
-# Executable spf-milter-in
-<src/spf_milter_in.{native,byte}>: pkg_milter
-<src/spf_milter_in.{native,byte}>: pkg_spf
-<src/spf_milter_in.{native,byte}>: pkg_srs
-<src/spf_milter_in.{native,byte}>: pkg_str
-<src/spf_milter_in.{native,byte}>: pkg_unix
-<src/spf_milter_in.{native,byte}>: pkg_threads
-<src/spf_milter_in.{native,byte}>: pkg_uint.uint32
-<src/spf_milter_in.{native,byte}>: pkg_uint.uint128
-<src/spf_milter_in.{native,byte}>: pkg_release
-<src/spf_milter_in.{native,byte}>: pkg_release.config
-<src/spf_milter_in.{native,byte}>: pkg_lwt
-<src/spf_milter_in.{native,byte}>: pkg_lwt.unix
-<src/spf_milter_in.{native,byte}>: pkg_lwt.syntax
-<src/spf_milter_in.{native,byte}>: pkg_lwt.preemptive
-# Executable spf-milter-out
-<src/spf_milter_out.{native,byte}>: pkg_milter
-<src/spf_milter_out.{native,byte}>: pkg_spf
-<src/spf_milter_out.{native,byte}>: pkg_srs
-<src/spf_milter_out.{native,byte}>: pkg_str
-<src/spf_milter_out.{native,byte}>: pkg_unix
-<src/spf_milter_out.{native,byte}>: pkg_threads
-<src/spf_milter_out.{native,byte}>: pkg_uint.uint32
-<src/spf_milter_out.{native,byte}>: pkg_uint.uint128
-<src/spf_milter_out.{native,byte}>: pkg_release
-<src/spf_milter_out.{native,byte}>: pkg_release.config
-<src/spf_milter_out.{native,byte}>: pkg_lwt
-<src/spf_milter_out.{native,byte}>: pkg_lwt.unix
-<src/spf_milter_out.{native,byte}>: pkg_lwt.syntax
-<src/spf_milter_out.{native,byte}>: pkg_lwt.preemptive
+# Executable srslyd
+<src/srslyd.{native,byte}>: pkg_str
+<src/srslyd.{native,byte}>: pkg_uint.uint32
+<src/srslyd.{native,byte}>: pkg_uint.uint128
+<src/srslyd.{native,byte}>: pkg_release
+<src/srslyd.{native,byte}>: pkg_release.config
+<src/srslyd.{native,byte}>: pkg_lwt
+<src/srslyd.{native,byte}>: pkg_lwt.unix
+<src/srslyd.{native,byte}>: pkg_lwt.syntax
+# Executable srsly-policyd
+<src/srsly_policyd.{native,byte}>: pkg_spf
+<src/srsly_policyd.{native,byte}>: pkg_str
+<src/srsly_policyd.{native,byte}>: pkg_unix
+<src/srsly_policyd.{native,byte}>: pkg_threads
+<src/srsly_policyd.{native,byte}>: pkg_uint.uint32
+<src/srsly_policyd.{native,byte}>: pkg_uint.uint128
+<src/srsly_policyd.{native,byte}>: pkg_release
+<src/srsly_policyd.{native,byte}>: pkg_release.config
+<src/srsly_policyd.{native,byte}>: pkg_lwt
+<src/srsly_policyd.{native,byte}>: pkg_lwt.unix
+<src/srsly_policyd.{native,byte}>: pkg_lwt.syntax
+<src/srsly_policyd.{native,byte}>: pkg_lwt.preemptive
+# Executable srsly-milter-in
+<src/srsly_milter_in.{native,byte}>: pkg_milter
+<src/srsly_milter_in.{native,byte}>: pkg_spf
+<src/srsly_milter_in.{native,byte}>: pkg_srs
+<src/srsly_milter_in.{native,byte}>: pkg_str
+<src/srsly_milter_in.{native,byte}>: pkg_unix
+<src/srsly_milter_in.{native,byte}>: pkg_threads
+<src/srsly_milter_in.{native,byte}>: pkg_uint.uint32
+<src/srsly_milter_in.{native,byte}>: pkg_uint.uint128
+<src/srsly_milter_in.{native,byte}>: pkg_release
+<src/srsly_milter_in.{native,byte}>: pkg_release.config
+<src/srsly_milter_in.{native,byte}>: pkg_lwt
+<src/srsly_milter_in.{native,byte}>: pkg_lwt.unix
+<src/srsly_milter_in.{native,byte}>: pkg_lwt.syntax
+<src/srsly_milter_in.{native,byte}>: pkg_lwt.preemptive
+# Executable srsly-milter-out
+<src/srsly_milter_out.{native,byte}>: pkg_milter
+<src/srsly_milter_out.{native,byte}>: pkg_spf
+<src/srsly_milter_out.{native,byte}>: pkg_srs
+<src/srsly_milter_out.{native,byte}>: pkg_str
+<src/srsly_milter_out.{native,byte}>: pkg_unix
+<src/srsly_milter_out.{native,byte}>: pkg_threads
+<src/srsly_milter_out.{native,byte}>: pkg_uint.uint32
+<src/srsly_milter_out.{native,byte}>: pkg_uint.uint128
+<src/srsly_milter_out.{native,byte}>: pkg_release
+<src/srsly_milter_out.{native,byte}>: pkg_release.config
+<src/srsly_milter_out.{native,byte}>: pkg_lwt
+<src/srsly_milter_out.{native,byte}>: pkg_lwt.unix
+<src/srsly_milter_out.{native,byte}>: pkg_lwt.syntax
+<src/srsly_milter_out.{native,byte}>: pkg_lwt.preemptive
 <src/*.ml{,i}>: pkg_milter
 <src/*.ml{,i}>: pkg_spf
 <src/*.ml{,i}>: pkg_srs
@@ -84,7 +84,7 @@
 <*/*.ml>: warn_error
 <src/policy.ml>: syntax_camlp4o
 <src/postfix.ml>: syntax_camlp4o
-<src/spfd.ml>: syntax_camlp4o
-<src/spf_policyd.ml>: syntax_camlp4o
-<src/spf_milter_*.ml>: syntax_camlp4o
+<src/srslyd.ml>: syntax_camlp4o
+<src/srsly_policyd.ml>: syntax_camlp4o
+<src/srsly_milter_*.ml>: syntax_camlp4o
 <src/milter_util.ml>: syntax_camlp4o

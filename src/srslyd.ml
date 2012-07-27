@@ -4,8 +4,8 @@ open Ipc.Slave_types
 
 let slave_ipc_handler fd = return ()
 
-let policyd_slaves = ["spf_policyd.native"]
-let milter_slaves = ["spf_milter_in.native"; "spf_milter_out.native"]
+let policyd_slaves = ["srsrly_policyd.native"]
+let milter_slaves = ["srsrly_milter_in.native"; "srsrly_milter_out.native"]
 
 let slave_connections = ref (fun () -> [])
 
@@ -32,9 +32,9 @@ let handle_sighup _ =
 let handle_sigusr1 _ =
   ignore_result (Lwt_log.notice "got SIGUSR1" >> reload_srs_secrets ())
 
-let lock_file = "/tmp/spfd.pid"
+let lock_file = "/tmp/srslyd.pid"
 let num_slaves = 4
-let listen_socket = "/tmp/spf.socket" 
+let listen_socket = "/tmp/srsly.socket" 
 
 let main get_conns =
   ignore (Lwt_unix.on_signal Sys.sigterm handle_sigterm);
