@@ -21,7 +21,7 @@ module Slave_ops = struct
     match s.[0] with
     | 'C' -> Configuration (Config.unserialize s 2)
     | 'R' -> Reload_srs_secrets
-    | other -> failwith "unexpected response: '%c'" other
+    | other -> failwith (sprintf "unexpected response: '%c'" other)
 end
 
 module Slave = Release_ipc.Make (Slave_ops)
