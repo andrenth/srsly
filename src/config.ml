@@ -3,10 +3,6 @@ open Release_config_types
 open Release_config_validations
 open Util
 
-type slave_config
-  = Policyd of Policyd_config.t
-  | Milter of Milter_config.t
-
 type t =
   { lock_file              : Lwt_io.file_name
   ; user                   : string
@@ -16,7 +12,13 @@ type t =
   ; fail_on_helo_temperror : bool
   ; local_whitelist        : Network.t list
   ; relay_whitelist        : Network.t list
-  ; slave                  : slave_config
+  ; listen_address         : string * string
+  ; srs_domain             : string option
+  ; srs_secret_file        : Lwt_io.file_name
+  ; srs_hash_max_age       : int
+  ; srs_hash_length        : int 
+  ; srs_separator          : char
+  ; milter_debug_level     : int
   }
 
 let file =
@@ -67,47 +69,38 @@ let default_fail_on_helo = default_bool true
 let default_local_whitelist = default_string_list local_addresses
 let default_relay_whitelist = default_string_list []
 let default_background = default_bool true
+let default_srs_hash_max_age = Some (`Int 8)
+let default_srs_hash_length = Some (`Int 8)
+let default_srs_separator = Some (`Str "=")
+let default_milter_debug_level = Some (`Int 0)
 
-let global_spec =
-  [ `Optional ("lock_file", default_lock_file, [existing_dirname])
-  ; `Optional ("user", default_user, [unprivileged_user])
-  ; `Optional ("binary_path", default_binary_path, [existing_directory])
-  ; `Optional ("log_level", default_log_level, [string_in log_levels])
-  ; `Optional ("fail_on_helo_temperror", default_fail_on_helo, [bool])
-  ; `Optional ("local_whitelist", default_local_whitelist, [string_list])
-  ; `Optional ("relay_whitelist", default_relay_whitelist, [string_list])
-  ; `Optional ("background", default_background, [bool])
-  ]
-
-let policyd_spec =
-  let module C = Policyd_config in
-  "policyd",
-    [ `Required ("listen_address", [socket_string])
-    ; `Optional ("num_slaves", C.default_num_slaves, [int])
-    ]
-
-let milter_spec =
-  let module C = Milter_config in
-  "milter",
-    [ `Required ("listen_address_in", [socket_string])
+let spec =
+  [`Global
+    [ `Optional ("lock_file", default_lock_file, [existing_dirname])
+    ; `Optional ("user", default_user, [unprivileged_user])
+    ; `Optional ("binary_path", default_binary_path, [existing_directory])
+    ; `Optional ("log_level", default_log_level, [string_in log_levels])
+    ; `Optional ("fail_on_helo_temperror", default_fail_on_helo, [bool])
+    ; `Optional ("local_whitelist", default_local_whitelist, [string_list])
+    ; `Optional ("relay_whitelist", default_relay_whitelist, [string_list])
+    ; `Optional ("background", default_background, [bool])
+    ; `Required ("listen_address_in", [socket_string])
     ; `Required ("listen_address_out", [socket_string])
     ; `Optional ("srs_domain", None, [string])
     ; `Required ("srs_secret_file", secure_secret_file)
-    ; `Optional ("srs_hash_max_age", C.default_srs_hash_max_age, [int])
-    ; `Optional ("srs_hash_length", C.default_srs_hash_length, [int])
-    ; `Optional ("srs_hash_separator", C.default_srs_hash_separator,
+    ; `Optional ("srs_hash_max_age", default_srs_hash_max_age, [int])
+    ; `Optional ("srs_hash_length", default_srs_hash_length, [int])
+    ; `Optional ("srs_separator", default_srs_separator,
                  [string_in ["+"; "-"; "="]])
-    ; `Optional ("debug_level", C.default_debug_level, [int_in_range (0, 6)])
-    ]
-
-let spec =
-  [ `Global global_spec
-  ; `Optional policyd_spec
-  ; `Optional milter_spec
-  ]
+    ; `Optional ("milter_debug_level", default_milter_debug_level,
+                 [int_in_range (0, 6)])
+    ]]
 
 let find key conf =
   Release_config.get_exn conf key () 
+
+let find_opt key conf =
+  Release_config.get conf key () 
 
 let log_level_of_string = function
   | "debug" -> Lwt_log.Debug
@@ -131,11 +124,14 @@ let make c =
     whitelist_of_list (string_list_value (find "local_whitelist" c)) in
   let relay_whitelist =
     whitelist_of_list (string_list_value (find "relay_whitelist" c)) in
-  let slave_config =
-    if Release_config.has_section c "milter" then
-      Milter (Milter_config.of_configuration c)
-    else
-      Policyd (Policyd_config.of_configuration c) in
+  let listen_address_in = string_value (find "listen_address_in" c) in
+  let listen_address_out = string_value (find "listen_address_out" c) in
+  let srs_domain = map_opt string_value (find_opt "srs_domain" c) in
+  let srs_secret_file = string_value (find "srs_secret_file" c) in
+  let srs_hash_max_age = int_value (find "srs_hash_max_age" c) in
+  let srs_hash_length = int_value (find "srs_hash_length" c) in
+  let srs_separator = (string_value (find "srs_separator" c)).[0] in
+  let milter_debug_level = int_value (find "milter_debug_level" c) in
   { lock_file              = lock_file
   ; user                   = user
   ; binary_path            = binary_path
@@ -144,35 +140,22 @@ let make c =
   ; fail_on_helo_temperror = fail_on_helo_temperror
   ; local_whitelist        = local_whitelist
   ; relay_whitelist        = relay_whitelist
-  ; slave                  = slave_config
+  ; listen_address         = listen_address_in, listen_address_out
+  ; srs_domain             = srs_domain
+  ; srs_secret_file        = srs_secret_file
+  ; srs_hash_max_age       = srs_hash_max_age
+  ; srs_hash_length        = srs_hash_length 
+  ; srs_separator          = srs_separator
+  ; milter_debug_level     = milter_debug_level
   }
-
-let validate conf =
-  let milter = Release_config.has_section conf "milter" in
-  let policyd = Release_config.has_section conf "policyd" in
-  if (milter && policyd) || (not milter && not policyd) then begin
-    fprintf stderr "choose either milter or policyd mode\n%!";
-    exit 1
-  end
 
 let read () =
   match Release_config.parse file spec with
   | `Configuration conf ->
-      validate conf;
       make conf
   | `Error e ->
       fprintf stderr "%s\n%!" e;
       exit 1
-
-let milter_config conf =
-  match conf.slave with
-  | Milter m -> m
-  | Policyd _ -> invalid_arg "milter_config"
-
-let policyd_config conf =
-  match conf.slave with
-  | Policyd p -> p
-  | Milter _ -> invalid_arg "policyd_config"
 
 let configuration = ref None
 
@@ -185,22 +168,11 @@ let current () =
   | Some c ->
       c
 
-let milter () =
-  milter_config (current ())
-
-let policyd () =
-  policyd_config (current ())
-
 let reload () =
   configuration := Some (read ())
 
 let replace c =
   configuration := Some c
-
-let is_milter () =
-  match (current ()).slave with
-  | Milter _ -> true
-  | Policyd _ -> false
 
 let serialize c =
   Marshal.to_string c []
@@ -228,3 +200,27 @@ let fail_on_helo_temperror () =
 
 let background () =
   (current ()).background
+
+let listen_address_in () =
+  fst (current ()).listen_address
+
+let listen_address_out () =
+  snd (current ()).listen_address
+
+let srs_domain () =
+  (current ()).srs_domain
+
+let srs_secret_file () =
+  (current ()).srs_secret_file
+
+let srs_hash_max_age () =
+  (current ()).srs_hash_max_age
+
+let srs_hash_length () =
+  (current ()).srs_hash_length
+
+let srs_separator () =
+  (current ()).srs_separator
+
+let milter_debug_level () =
+  (current ()).milter_debug_level

@@ -24,7 +24,7 @@ let envfrom ctx from args =
   else
     with_priv_data Milter.Tempfail ctx
       (fun priv ->
-        let srs_domain = Milter_config.srs_domain (Config.milter ()) in
+        let srs_domain = Config.srs_domain () in
         let myhostname = Milter.getsymval ctx "j" in
         match srs_domain <|> myhostname with
         | Some alias ->

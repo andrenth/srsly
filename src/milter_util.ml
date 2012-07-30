@@ -57,7 +57,7 @@ let handle_ipc_response = function
   | Configuration c ->
       Config.replace c;
       set_log_level (Config.log_level ());
-      Milter.setdbg (Milter_config.debug_level (Config.milter ()))
+      Milter.setdbg (Config.milter_debug_level ())
   | SRS_secrets ss ->
       Milter_srs.reload ss
 
@@ -78,7 +78,7 @@ let main filter listen_addr fd =
   lwt () = Lwt_log.notice "starting up" in
   lwt () = read_srs_secrets fd in
   let ipc_read_t = ipc_reader fd in
-  Milter.setdbg (Milter_config.debug_level (Config.milter ()));
+  Milter.setdbg (Config.milter_debug_level ());
   Milter.setconn listen_addr;
   Milter.register filter;
   Milter.main ();

@@ -2,16 +2,14 @@ open Lwt
 open Printf
 open Ipc.Slave_types
 
-let policyd_slaves = ["srsly_policyd.native"]
-let milter_slaves = ["srsly_milter_in.native"; "srsly_milter_out.native"]
+let milters = ["srsly_milter_in.native"; "srsly_milter_out.native"]
 
 let slave_connections = ref (fun () -> [])
 
 let read_srs_secrets () = 
-  let config = Config.milter () in
   let secret = ref "" in
   let secrets = ref [] in
-  let ch = open_in (Milter_config.srs_secret_file config) in
+  let ch = open_in (Config.srs_secret_file ()) in
   let first = ref true in
   (try
     while true do
@@ -67,7 +65,7 @@ let () =
       (fun slave ->
         let path = sprintf "%s/%s" (Config.binary_path ()) slave in
         (path, slave_ipc_handler, 1))
-      (if Config.is_milter () then milter_slaves else policyd_slaves) in
+      milters in
   Release.master_slaves
     ~background:(Config.background ())
     ~syslog:false

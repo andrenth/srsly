@@ -9,12 +9,11 @@ let unserialize_secrets s i =
   (Marshal.from_string s i : string * (string list))
 
 let make_srs secrets =
-  let config = Config.milter () in
   SRS.make
     secrets
-    (Milter_config.srs_hash_max_age config)
-    (Milter_config.srs_hash_length config)
-    (Milter_config.srs_separator config)
+    (Config.srs_hash_max_age ())
+    (Config.srs_hash_length ())
+    (Config.srs_separator ())
 
 let reload secrets =
   srs := Some (make_srs secrets)

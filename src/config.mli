@@ -1,11 +1,8 @@
 type t
 
 val current : unit -> t
-val milter : unit -> Milter_config.t
-val policyd : unit -> Policyd_config.t
 val reload : unit -> unit
 val replace : t -> unit
-val is_milter : unit -> bool
 val serialize : t -> string
 val unserialize : string -> int -> t
 val user : unit -> string
@@ -15,3 +12,11 @@ val local_whitelist : unit -> Network.t list
 val relay_whitelist : unit -> Network.t list
 val fail_on_helo_temperror : unit -> bool
 val background : unit -> bool
+val listen_address_in : unit -> string
+val listen_address_out : unit -> string
+val srs_domain : unit -> string option
+val srs_secret_file : unit -> Lwt_io.file_name
+val srs_hash_max_age : unit -> int
+val srs_hash_length : unit -> int
+val srs_separator : unit -> char
+val milter_debug_level : unit -> int
