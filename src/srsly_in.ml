@@ -24,4 +24,4 @@ let filter =
 let () =
   let main = Milter_util.main filter (Config.listen_address_in ()) in
   set_log_level (Config.log_level ());
-  Release.me ~syslog:false ~user:(Config.user ()) ~main:main ()
+  Release.me ~syslog:true ~user:(Config.user ()) ~main:main ()

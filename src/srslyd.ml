@@ -68,7 +68,7 @@ let () =
       milters in
   Release.master_slaves
     ~background:(Config.background ())
-    ~syslog:false
+    ~syslog:true
     ~lock_file:lock_file
     ~main:main
     ~slaves:slaves
