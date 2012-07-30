@@ -1,2 +1,4 @@
 val current : unit -> SRS.t
-val reload : unit -> unit
+val reload : string * string list -> unit
+val serialize_secrets : string * string list -> string
+val unserialize_secrets : string -> int -> string * string list

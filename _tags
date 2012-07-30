@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: ffd88bdfdcd2f120b90896c9a06339c1)
+# DO NOT EDIT (digest: a33c3a1d036dfb834a97fa13e22d106b)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -14,6 +14,7 @@
 "_darcs": -traverse
 "_darcs": not_hygienic
 # Executable srslyd
+<src/srslyd.{native,byte}>: pkg_srs
 <src/srslyd.{native,byte}>: pkg_str
 <src/srslyd.{native,byte}>: pkg_uint.uint32
 <src/srslyd.{native,byte}>: pkg_uint.uint128
@@ -24,6 +25,7 @@
 <src/srslyd.{native,byte}>: pkg_lwt.syntax
 # Executable srsly-policyd
 <src/srsly_policyd.{native,byte}>: pkg_spf
+<src/srsly_policyd.{native,byte}>: pkg_srs
 <src/srsly_policyd.{native,byte}>: pkg_str
 <src/srsly_policyd.{native,byte}>: pkg_unix
 <src/srsly_policyd.{native,byte}>: pkg_threads

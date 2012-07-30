@@ -32,7 +32,7 @@ let with_priv_data z ctx f =
   | Some p -> let p', r = f p in Milter.setpriv ctx p'; r
 
 let log f fmt =
-  ksprintf (fun s -> ignore (f s)) fmt
+  ksprintf (fun s -> ignore_result (f s)) fmt
 
 let canonicalize a =
   let e = String.length a - 1 in
@@ -58,18 +58,25 @@ let handle_ipc_response = function
       Config.replace c;
       set_log_level (Config.log_level ());
       Milter.setdbg (Milter_config.debug_level (Config.milter ()))
-  | Reload_srs_secrets ->
-      Milter_srs.reload ()
+  | SRS_secrets ss ->
+      Milter_srs.reload ss
 
-let rec ipc_reader fd =
-  lwt () = match_lwt Ipc.Slave.read_response fd with
+let handle_ipc = function
   | `Response r -> return (handle_ipc_response r)
   | `EOF -> Lwt_log.error "EOF on IPC socket" >> exit 1
-  | `Timeout -> Lwt_log.error "timeout on IPC socket" in
+  | `Timeout -> Lwt_log.error "timeout on IPC socket"
+
+let read_srs_secrets fd =
+  Ipc.Slave.make_request fd SRS_secrets_request handle_ipc
+
+let rec ipc_reader fd =
+  lwt r = Ipc.Slave.read_response fd in
+  lwt () = handle_ipc r in
   ipc_reader fd
 
 let main filter listen_addr fd =
   lwt () = Lwt_log.notice "starting up" in
+  lwt () = read_srs_secrets fd in
   let ipc_read_t = ipc_reader fd in
   Milter.setdbg (Milter_config.debug_level (Config.milter ()));
   Milter.setconn listen_addr;

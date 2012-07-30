@@ -2,25 +2,39 @@ open Lwt
 open Printf
 open Ipc.Slave_types
 
-let slave_ipc_handler fd = return ()
-
 let policyd_slaves = ["srsly_policyd.native"]
 let milter_slaves = ["srsly_milter_in.native"; "srsly_milter_out.native"]
 
 let slave_connections = ref (fun () -> [])
 
+let read_srs_secrets () = 
+  let config = Config.milter () in
+  let secret = ref "" in
+  let secrets = ref [] in
+  let ch = open_in (Milter_config.srs_secret_file config) in
+  let first = ref true in
+  (try
+    while true do
+      if !first then begin
+        secret := input_line ch;
+        first := false
+      end else
+        secrets := input_line ch :: !secrets
+    done
+  with End_of_file ->
+    close_in ch);
+  !secret, List.rev !secrets
+
 let reload_config () =
   Config.reload ();
-  (* At this point the slaves have released privileges and can't read
-   * the configuration file by themselves, so we use IPC. *)
-  let send_configuration_to_slave fd =
+  let send_configuration fd =
     Ipc.Slave.write_response fd (Configuration (Config.current ())) in
-  Lwt_list.iter_p send_configuration_to_slave (!slave_connections ())
+  Lwt_list.iter_p send_configuration (!slave_connections ())
 
 let reload_srs_secrets () =
-  let send_srs_reload_to_slave fd =
-    Ipc.Slave.write_response fd Reload_srs_secrets in
-  Lwt_list.iter_p send_srs_reload_to_slave (!slave_connections ())
+  let send_secrets fd =
+    Ipc.Slave.write_response fd (SRS_secrets (read_srs_secrets ())) in
+  Lwt_list.iter_p send_secrets (!slave_connections ())
 
 let handle_sigterm _ =
   ignore_result (Lwt_log.notice "got SIGTERM, exiting");
@@ -31,6 +45,11 @@ let handle_sighup _ =
 
 let handle_sigusr1 _ =
   ignore_result (Lwt_log.notice "got SIGUSR1" >> reload_srs_secrets ())
+
+let slave_ipc_handler fd =
+  let handler = function
+    | SRS_secrets_request -> return (SRS_secrets (read_srs_secrets ())) in
+  Ipc.Slave.handle_request fd handler
 
 let lock_file = "/tmp/srslyd.pid"
 let num_slaves = 4

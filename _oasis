@@ -11,7 +11,8 @@ Executable "srslyd"
   MainIs:          srslyd.ml
   Install:         true
   CompiledObject:  best
-  BuildDepends:    str,
+  BuildDepends:    srs,
+                   str,
                    uint.uint32,
                    uint.uint128,
                    release,
@@ -27,6 +28,7 @@ Executable "srsly-policyd"
   Install:         true
   CompiledObject:  best
   BuildDepends:    spf,
+                   srs,
                    str,
                    unix,
                    threads,
