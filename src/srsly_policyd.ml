@@ -46,6 +46,8 @@ let handle_ipc_response = function
   | Configuration c ->
       Config.replace c;
       set_log_level (Config.log_level ())
+  | Reload_srs_secrets ->
+      invalid_arg "policyd has no SRS support; this shouldn't have happened"
 
 let rec ipc_reader fd =
   lwt () = match_lwt Ipc.Slave.read_response fd with
