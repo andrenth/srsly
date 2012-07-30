@@ -54,37 +54,60 @@ let secure_secret_file =
   ; nonempty_file
   ]
 
+let local_addresses =
+  [ "127.0.0.0/8"
+  ; "::ffff:127.0.0.0/104"
+  ]
+
+let default_lock_file = default_string "/var/run/srslyd/srslyd.pid"
+let default_user = default_string "srslyd"
+let default_binary_path = default_string "/usr/lib/srslyd"
+let default_log_level = default_string "notice"
+let default_fail_on_helo = default_bool true
+let default_local_whitelist = default_string_list local_addresses
+let default_relay_whitelist = default_string_list []
+let default_background = default_bool true
+
+let global_spec =
+  [ `Optional ("lock_file", default_lock_file, [existing_dirname])
+  ; `Optional ("user", default_user, [unprivileged_user])
+  ; `Optional ("binary_path", default_binary_path, [existing_directory])
+  ; `Optional ("log_level", default_log_level, [string_in log_levels])
+  ; `Optional ("fail_on_helo_temperror", default_fail_on_helo, [bool])
+  ; `Optional ("local_whitelist", default_local_whitelist, [string])
+  ; `Optional ("relay_whitelist", default_relay_whitelist, [string])
+  ; `Optional ("background", default_background, [bool])
+  ]
+
+let policyd_spec =
+  let module C = Policyd_config in
+  "policyd",
+    [ `Required ("listen_address", [socket_string])
+    ; `Optional ("num_slaves", C.default_num_slaves, [int])
+    ]
+
+let milter_spec =
+  let module C = Milter_config in
+  "milter",
+    [ `Required ("listen_address_in", [socket_string])
+    ; `Required ("listen_address_out", [socket_string])
+    ; `Optional ("srs_domain", None, [string])
+    ; `Required ("srs_secret_file", secure_secret_file)
+    ; `Optional ("srs_hash_max_age", C.default_srs_hash_max_age, [int])
+    ; `Optional ("srs_hash_length", C.default_srs_hash_length, [int])
+    ; `Optional ("srs_hash_separator", C.default_srs_hash_separator,
+                 [string_in ["+"; "-"; "="]])
+    ; `Optional ("debug_level", C.default_debug_level, [int_in_range (0, 6)])
+    ]
+
 let spec =
-  [ `Global
-      [ `Optional ("lock_file",              [existing_dirname])
-      ; `Optional ("user",                   [unprivileged_user])
-      ; `Optional ("binary_path",            [existing_directory])
-      ; `Optional ("log_level",              [string_in log_levels])
-      ; `Optional ("fail_on_helo_temperror", [bool])
-      ; `Optional ("local_whitelist",        [string])
-      ; `Optional ("relay_whitelist",        [string])
-      ; `Optional ("background",             [bool])
-      ]
-
-  ; `Optional ("policyd",
-      [ `Required ("listen_address",         [socket_string])
-      ; `Optional ("num_slaves",             [int])
-      ])
-
-  ; `Optional ("milter",
-      [ `Required ("listen_address_in",      [socket_string])
-      ; `Required ("listen_address_out",     [socket_string])
-      ; `Optional ("srs_domain",             [string])
-      ; `Required ("srs_secret_file",        secure_secret_file)
-      ; `Optional ("srs_hash_max_age",       [int])
-      ; `Optional ("srs_hash_length",        [int])
-      ; `Optional ("srs_hash_separator",     [string_in ["+"; "-"; "="]])
-      ; `Optional ("debug_level",            [int_in_range (0, 6)])
-      ])
+  [ `Global global_spec
+  ; `Optional policyd_spec
+  ; `Optional milter_spec
   ]
 
 let find key conf =
-  Release_config.get conf key () 
+  Release_config.get_exn conf key () 
 
 let log_level_of_string = function
   | "debug" -> Lwt_log.Debug
@@ -98,43 +121,19 @@ let log_level_of_string = function
 let whitelist_of_string s =
   List.map Network.of_string (Str.split (Str.regexp "[ \t]*,[ \t]+*") s)
 
-let default_local_addresses =
-  List.map Network.of_string
-    [ "127.0.0.0/8"
-    ; "::ffff:127.0.0.0/104"
-    ]
-
 let default_relay_addresses = []
 
-let lock_file = "/var/run/srslyd/srslyd.pid"
-let user = "srslyd"
-let binary_path = "/usr/lib/srslyd"
-let log_level = Lwt_log.Notice
-let fail_on_helo_temperror = true
-let local_whitelist = default_local_addresses
-let relay_whitelist = default_relay_addresses
-
 let make c =
-  let lock_file = default lock_file string_value (find "lock_file" c) in
-  let user = default user string_value (find "user" c) in
-  let binary_path = default binary_path string_value (find "binary_path" c) in
-  let background = default true bool_value (find "background" c) in
-  let log_level =
-    default log_level
-      (fun l -> log_level_of_string (string_value l))
-      (find "log_level" c) in
-  let fail_on_helo_temperror =
-    default fail_on_helo_temperror
-      bool_value
-      (find "fail_on_helo_temperror" c) in
-  let local_whitelist =
-    default local_whitelist
-      (fun w -> whitelist_of_string (string_value w))
-      (find "local_whitelist" c) in
+  let lock_file = string_value (find "lock_file" c) in
+  let user = string_value (find "user" c) in
+  let binary_path = string_value (find "binary_path" c) in
+  let background = bool_value (find "background" c) in
+  let log_level = log_level_of_string (string_value (find "log_level" c)) in
+  let fail_on_helo_temperror = bool_value (find "fail_on_helo_temperror" c) in
+  let local_whitelist = 
+    whitelist_of_string (string_value (find "local_whitelist" c)) in
   let relay_whitelist =
-    default relay_whitelist
-      (fun w -> whitelist_of_string (string_value w))
-      (find "relay_whitelist" c) in
+    whitelist_of_string (string_value (find "relay_whitelist" c)) in
   let slave_config =
     if Release_config.has_section c "milter" then
       Milter (Milter_config.of_configuration c)
