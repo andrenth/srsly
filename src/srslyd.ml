@@ -4,8 +4,8 @@ open Ipc.Slave_types
 
 let slave_ipc_handler fd = return ()
 
-let policyd_slaves = ["srsrly_policyd.native"]
-let milter_slaves = ["srsrly_milter_in.native"; "srsrly_milter_out.native"]
+let policyd_slaves = ["srsly_policyd.native"]
+let milter_slaves = ["srsly_milter_in.native"; "srsly_milter_out.native"]
 
 let slave_connections = ref (fun () -> [])
 
