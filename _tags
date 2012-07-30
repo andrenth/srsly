@@ -81,7 +81,7 @@
 <src/*.ml{,i}>: pkg_lwt.preemptive
 # OASIS_STOP
 <*/*.ml>: annot
-<*/*.ml>: warn_error
+<*/*.ml>: warn_error_A
 <src/policy.ml>: syntax_camlp4o
 <src/postfix.ml>: syntax_camlp4o
 <src/srslyd.ml>: syntax_camlp4o
