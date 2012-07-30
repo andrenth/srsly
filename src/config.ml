@@ -74,8 +74,8 @@ let global_spec =
   ; `Optional ("binary_path", default_binary_path, [existing_directory])
   ; `Optional ("log_level", default_log_level, [string_in log_levels])
   ; `Optional ("fail_on_helo_temperror", default_fail_on_helo, [bool])
-  ; `Optional ("local_whitelist", default_local_whitelist, [string])
-  ; `Optional ("relay_whitelist", default_relay_whitelist, [string])
+  ; `Optional ("local_whitelist", default_local_whitelist, [string_list])
+  ; `Optional ("relay_whitelist", default_relay_whitelist, [string_list])
   ; `Optional ("background", default_background, [bool])
   ]
 
@@ -118,10 +118,7 @@ let log_level_of_string = function
   | "fatal" -> Lwt_log.Fatal
   | _ -> invalid_arg "Config.log_level_of_string"
 
-let whitelist_of_string s =
-  List.map Network.of_string (Str.split (Str.regexp "[ \t]*,[ \t]+*") s)
-
-let default_relay_addresses = []
+let whitelist_of_list = List.map Network.of_string
 
 let make c =
   let lock_file = string_value (find "lock_file" c) in
@@ -131,9 +128,9 @@ let make c =
   let log_level = log_level_of_string (string_value (find "log_level" c)) in
   let fail_on_helo_temperror = bool_value (find "fail_on_helo_temperror" c) in
   let local_whitelist = 
-    whitelist_of_string (string_value (find "local_whitelist" c)) in
+    whitelist_of_list (string_list_value (find "local_whitelist" c)) in
   let relay_whitelist =
-    whitelist_of_string (string_value (find "relay_whitelist" c)) in
+    whitelist_of_list (string_list_value (find "relay_whitelist" c)) in
   let slave_config =
     if Release_config.has_section c "milter" then
       Milter (Milter_config.of_configuration c)
