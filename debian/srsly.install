@@ -1,0 +1,6 @@
+/etc/srsly/srslyd.conf
+/etc/rsyslog.d/srsly.conf
+/usr/lib/srsly/srslyd
+/usr/lib/srsly/srsly_in
+/usr/lib/srsly/srsly_out
+/var/lib/srsly

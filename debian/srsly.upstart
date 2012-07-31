@@ -1,0 +1,51 @@
+description "srsly - SPF validator with SRS support"
+
+start on runlevel [2345]
+stop on runlevel [!2345]
+
+pre-start script
+  test -x /usr/sbin/srsly || { stop; exit 0; }
+  test -r /etc/srsly/srslyd.conf || { stop; exit 0; }
+
+  # setup the chroot area
+
+  mkdir -p /var/lib/srsly/etc
+  touch /var/lib/srsly/etc/resolv.conf
+  mount -o bind /etc/resolv.conf /var/lib/srsly/etc/resolv.conf
+
+  mkdir -p /var/lib/srsly/lib
+  libpath=/lib
+  if [ "`uname -m`" = "x86_64" ]; then
+    libpath=$libpath/x86_64-linux-gnu
+  fi
+  for src in `ls $libpath/libresolv* $libpath/libnss_dns*`; do
+    dst=/var/lib/srsly/lib/${src##*/}
+    touch $dst
+    mount -o bind $src $dst
+  done
+
+  mkdir -p /var/lib/srsly/dev
+  touch /var/lib/srsly/dev/log
+  mount -o bind /dev/log /var/lib/srsly/dev/log
+end script
+
+script
+  exec /usr/sbin/srsly start
+end script
+
+post-stop script
+  umount /var/lib/srsly/etc/resolv.conf
+  rm /var/lib/srsly/etc/resolv.conf
+  rmdir /var/lib/srsly/etc
+
+  libpath=/var/lib/srsly/lib
+  for lib in `ls $libpath/libresolv* $libpath/libnss_dns*`; do
+    umount $lib
+    rm /var/lib/srsly/lib/$lib
+  done
+  rmdir $libpath
+
+  umount /var/lib/srsly/dev/log
+  rm /var/lib/srsly/dev/log
+  rmdir /var/lib/srsly/dev
+end script

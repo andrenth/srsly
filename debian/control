@@ -1,0 +1,25 @@
+Source: srsly
+Section: admin
+Priority: optional
+Maintainer: Andre Nathan <andre@digirati.com.br>
+Build-Depends: 
+  debhelper (>= 9),
+  ocaml (>= 3.12.0),
+#  librelease-ocaml-dev (>= 0.1.0)
+#  liblwt-ocaml-dev (>= 2.3.2),
+#  libuint-ocaml-dev (>= 1.0.1),
+#  libmilter-ocaml-dev,
+#  libspf-ocaml-dev,
+#  libsrs-ocaml-dev
+Standards-Version: 3.9.3
+
+Package: srsly
+Architecture: any
+Pre-depends: adduser
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: milter-based SPF daemon with SRS support.
+ SRSly is a milter-based daemon with support for SPF
+ verification and SRS address rewriting.
+ .
+ This package contains the srsly server and its command
+ line utility.
