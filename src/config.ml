@@ -61,38 +61,39 @@ let local_addresses =
   ; "::ffff:127.0.0.0/104"
   ]
 
-let default_lock_file = default_string "/var/run/srslyd/srslyd.pid"
-let default_user = default_string "srslyd"
-let default_binary_path = default_string "/usr/lib/srslyd"
-let default_log_level = default_string "notice"
-let default_fail_on_helo = default_bool true
-let default_local_whitelist = default_string_list local_addresses
-let default_relay_whitelist = default_string_list []
-let default_background = default_bool true
-let default_srs_hash_max_age = Some (`Int 8)
-let default_srs_hash_length = Some (`Int 8)
-let default_srs_separator = Some (`Str "=")
-let default_milter_debug_level = Some (`Int 0)
+module D = struct
+  let lock_file = default_string "/var/run/srslyd/srslyd.pid"
+  let user = default_string "srslyd"
+  let binary_path = default_string "/usr/lib/srslyd"
+  let log_level = default_string "notice"
+  let fail_on_helo = default_bool true
+  let local_whitelist = default_string_list local_addresses
+  let relay_whitelist = default_string_list []
+  let background = default_bool true
+  let srs_hash_max_age = Some (`Int 8)
+  let srs_hash_length = Some (`Int 8)
+  let srs_separator = Some (`Str "=")
+  let milter_debug_level = Some (`Int 0)
+end
 
 let spec =
   [`Global
-    [ `Optional ("lock_file", default_lock_file, [existing_dirname])
-    ; `Optional ("user", default_user, [unprivileged_user])
-    ; `Optional ("binary_path", default_binary_path, [existing_directory])
-    ; `Optional ("log_level", default_log_level, [string_in log_levels])
-    ; `Optional ("fail_on_helo_temperror", default_fail_on_helo, [bool])
-    ; `Optional ("local_whitelist", default_local_whitelist, [string_list])
-    ; `Optional ("relay_whitelist", default_relay_whitelist, [string_list])
-    ; `Optional ("background", default_background, [bool])
+    [ `Optional ("lock_file", D.lock_file, [existing_dirname])
+    ; `Optional ("user", D.user, [unprivileged_user])
+    ; `Optional ("binary_path", D.binary_path, [existing_directory])
+    ; `Optional ("log_level", D.log_level, [string_in log_levels])
+    ; `Optional ("fail_on_helo_temperror", D.fail_on_helo, [bool])
+    ; `Optional ("local_whitelist", D.local_whitelist, [string_list])
+    ; `Optional ("relay_whitelist", D.relay_whitelist, [string_list])
+    ; `Optional ("background", D.background, [bool])
     ; `Required ("listen_address_in", [socket_string])
     ; `Required ("listen_address_out", [socket_string])
     ; `Optional ("srs_domain", None, [string])
     ; `Required ("srs_secret_file", secure_secret_file)
-    ; `Optional ("srs_hash_max_age", default_srs_hash_max_age, [int])
-    ; `Optional ("srs_hash_length", default_srs_hash_length, [int])
-    ; `Optional ("srs_separator", default_srs_separator,
-                 [string_in ["+"; "-"; "="]])
-    ; `Optional ("milter_debug_level", default_milter_debug_level,
+    ; `Optional ("srs_hash_max_age", D.srs_hash_max_age, [int])
+    ; `Optional ("srs_hash_length", D.srs_hash_length, [int])
+    ; `Optional ("srs_separator", D.srs_separator, [string_in ["+"; "-"; "="]])
+    ; `Optional ("milter_debug_level", D.milter_debug_level,
                  [int_in_range (0, 6)])
     ]]
 
