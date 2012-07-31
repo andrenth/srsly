@@ -1,5 +1,7 @@
 open Util
 
+module O = Release_option
+
 let check_networks networks msg addr =
   let rec check = function
     | [] ->
@@ -24,4 +26,4 @@ let check_relay addr =
     addr
 
 let check addr =
-  check_local addr <|> check_relay addr
+  O.choose (check_local addr) (check_relay addr)

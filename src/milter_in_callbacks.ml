@@ -2,6 +2,8 @@ open Printf
 open Milter_util
 open Util
 
+module O = Release_option
+
 type result
   = No_result
   | Whitelisted of string
@@ -33,7 +35,7 @@ let milter_tempfail ctx msg =
 
 let spf_check_helo ctx priv =
   let addr = priv.addr in
-  let helo = some (priv.helo) in
+  let helo = O.some (priv.helo) in
   let spf_res = unbox_spf (SPF.check_helo spf addr helo) in
   let milter_res = match SPF.result spf_res with
   | SPF.Fail c ->
@@ -52,7 +54,7 @@ let spf_check_helo ctx priv =
 
 let spf_check_from ctx priv from =
   let addr = priv.addr in
-  let helo = some (priv.helo) in
+  let helo = O.some (priv.helo) in
   let spf_res = unbox_spf (SPF.check_from spf addr helo from) in
   let milter_res = match SPF.result spf_res with
   | SPF.Fail c ->
@@ -84,9 +86,10 @@ let whitelist s =
 (* Callbacks *)
 
 let connect ctx host addr =
-  debug "connect callback";
-  let addr = default Unix.inet_addr_loopback inet_addr_of_sockaddr addr in
-  let result = default No_result whitelist (Whitelist.check addr) in
+  debug "connect callback: host=%s addr=%s"
+    (O.default "?" host) (O.may_default "?" string_of_sockaddr addr);
+  let addr = O.may_default Unix.inet_addr_loopback inet_addr_of_sockaddr addr in
+  let result = O.may_default No_result whitelist (Whitelist.check addr) in
   let priv =
     { addr      = addr
     ; helo      = None
@@ -98,9 +101,10 @@ let connect ctx host addr =
   Milter.Continue
 
 let helo ctx helo =
-  debug "helo callback";
+  debug "helo callback: helo=%s" (O.default "?" helo);
   match helo with
   | None ->
+      notice "remote didn't say HELO, rejecting message";
       Milter.setreply ctx "503" (Some "5.0.0") (Some "Please say HELO");
       Milter.Reject
   | Some name ->
@@ -108,7 +112,7 @@ let helo ctx helo =
         (fun priv -> { priv with helo = Some name }, Milter.Continue)
 
 let envfrom ctx from args =
-  debug "envfrom callback";
+  debug "envfrom callback: from=%s" from;
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       let priv = { priv with is_bounce = from = "<>" } in
@@ -125,6 +129,7 @@ let envfrom ctx from args =
           priv, Milter.Continue)
 
 let envrcpt ctx rcpt args =
+  debug "envrcpt callback: rcpt=%s" rcpt;
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       if priv.is_bounce && Str.string_match srs_re rcpt 0 then begin
@@ -133,10 +138,10 @@ let envrcpt ctx rcpt args =
           let n = 1 + int_of_string (Str.matched_group 1 rcpt) in
           let srs = Milter_srs.current () in
           let rev_rcpt = applyn (SRS.reverse srs) (canonicalize rcpt) n in
-          debug "SRS-reversed address for '%s': '%s'" rcpt rev_rcpt;
+          info "SRS-reversed address for '%s': '%s'" rcpt rev_rcpt;
           { priv with rcpt = Some (rcpt, rev_rcpt) }, Milter.Continue
         with SRS.SRS_error s ->
-          debug "SRS failure: %s" s;
+          notice "SRS failure: %s: %s" rcpt s;
           priv, milter_reject ctx s
       end else
         priv, Milter.Continue)
@@ -147,15 +152,20 @@ let eom ctx =
     (fun priv ->
       (match priv.rcpt with
       | Some (srs_rcpt, rev_rcpt) ->
-          debug "replacing bounce destination '%s' with '%s'" srs_rcpt rev_rcpt;
+          info "replacing bounce destination '%s' with '%s'" srs_rcpt rev_rcpt;
           Milter.delrcpt ctx srs_rcpt;
           Milter.addrcpt ctx rev_rcpt
       | None ->
           ());
       (match priv.result with
-      | No_result -> ()
-      | Whitelisted s -> milter_add_header ctx s
-      | Spf_response r -> milter_add_header ctx (SPF.received_spf r));
+      | No_result ->
+          ()
+      | Whitelisted s ->
+          info "Whitelisted address: %s" s;
+          milter_add_header ctx s
+      | Spf_response r ->
+          info "SPF result: %s" (SPF.string_of_result (SPF.result r));
+          milter_add_header ctx (SPF.received_spf r));
       priv, Milter.Continue)
 
 let abort ctx =
@@ -166,10 +176,11 @@ let abort ctx =
 
 let close ctx =
   debug "close callback";
-  maybe (fun _ -> Milter.unsetpriv ctx) (Milter.getpriv ctx);
+  O.may (fun () -> Milter.unsetpriv ctx) (Milter.getpriv ctx);
   Milter.Continue
 
 let negotiate ctx actions steps =
+  debug "negotiate callback";
   let reqactions = [Milter.ADDHDRS; Milter.DELRCPT; Milter.ADDRCPT] in
   if FlagSet.subset (FlagSet.of_list reqactions) (FlagSet.of_list actions) then
     let unreq_steps =

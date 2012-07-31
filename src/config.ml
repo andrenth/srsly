@@ -3,6 +3,8 @@ open Release_config_types
 open Release_config_validations
 open Util
 
+module O = Release_option
+
 type t =
   { lock_file              : Lwt_io.file_name
   ; user                   : string
@@ -127,7 +129,7 @@ let make c =
     whitelist_of_list (string_list_value (find "relay_whitelist" c)) in
   let listen_address_in = string_value (find "listen_address_in" c) in
   let listen_address_out = string_value (find "listen_address_out" c) in
-  let srs_domain = map_opt string_value (find_opt "srs_domain" c) in
+  let srs_domain = O.map string_value (find_opt "srs_domain" c) in
   let srs_secret_file = string_value (find "srs_secret_file" c) in
   let srs_hash_max_age = int_value (find "srs_hash_max_age" c) in
   let srs_hash_length = int_value (find "srs_hash_length" c) in
@@ -180,6 +182,9 @@ let serialize c =
 
 let unserialize s i =
   (Marshal.from_string s i : t)
+
+let lock_file () =
+  (current ()).lock_file
 
 let user () =
   (current ()).user

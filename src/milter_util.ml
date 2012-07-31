@@ -26,13 +26,19 @@ module StepSet = SetOfList.Make(struct
   let compare = compare
 end)
 
+let log f fmt =
+  ksprintf (fun s -> ignore_result (f s)) fmt
+
+let debug fmt = log Lwt_log.debug fmt
+let notice fmt = log Lwt_log.notice fmt
+let info fmt = log Lwt_log.info fmt
+let warning fmt = log Lwt_log.warning fmt
+let error fmt = log Lwt_log.error fmt
+
 let with_priv_data z ctx f =
   match Milter.getpriv ctx with
   | None -> z
   | Some p -> let p', r = f p in Milter.setpriv ctx p'; r
-
-let log f fmt =
-  ksprintf (fun s -> ignore_result (f s)) fmt
 
 let canonicalize a =
   let e = String.length a - 1 in
@@ -55,10 +61,12 @@ let canonicalize a =
 
 let handle_ipc_response = function
   | Configuration c ->
+      notice "received a new configuration; replacing";
       Config.replace c;
       set_log_level (Config.log_level ());
       Milter.setdbg (Config.milter_debug_level ())
   | SRS_secrets ss ->
+      notice "received new SRS secrets; reloading";
       Milter_srs.reload ss
 
 let handle_ipc = function
@@ -71,6 +79,7 @@ let read_srs_secrets fd =
 
 let rec ipc_reader fd =
   lwt r = Ipc.Slave.read_response fd in
+  lwt () = Lwt_log.debug "received IPC response from master" in
   lwt () = handle_ipc r in
   ipc_reader fd
 
@@ -83,9 +92,3 @@ let main filter listen_addr fd =
   Milter.register filter;
   Milter.main ();
   Lwt.join [ipc_read_t]
-
-let debug fmt = log Lwt_log.debug fmt
-let notice fmt = log Lwt_log.notice fmt
-let info fmt = log Lwt_log.info fmt
-let warning fmt = log Lwt_log.warning fmt
-let error fmt = log Lwt_log.error fmt
