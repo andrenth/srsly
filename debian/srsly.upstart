@@ -9,11 +9,9 @@ pre-start script
 
   # setup the chroot area
 
-  mkdir -p /var/lib/srsly/etc
   touch /var/lib/srsly/etc/resolv.conf
   mount -o bind /etc/resolv.conf /var/lib/srsly/etc/resolv.conf
 
-  mkdir -p /var/lib/srsly/lib
   libpath=/lib
   if [ "`uname -m`" = "x86_64" ]; then
     libpath=$libpath/x86_64-linux-gnu
@@ -23,10 +21,6 @@ pre-start script
     touch $dst
     mount -o bind $src $dst
   done
-
-  mkdir -p /var/lib/srsly/dev
-  touch /var/lib/srsly/dev/log
-  mount -o bind /dev/log /var/lib/srsly/dev/log
 end script
 
 script
@@ -36,16 +30,10 @@ end script
 post-stop script
   umount /var/lib/srsly/etc/resolv.conf
   rm /var/lib/srsly/etc/resolv.conf
-  rmdir /var/lib/srsly/etc
 
   libpath=/var/lib/srsly/lib
   for lib in `ls $libpath/libresolv* $libpath/libnss_dns*`; do
     umount $lib
     rm /var/lib/srsly/lib/$lib
   done
-  rmdir $libpath
-
-  umount /var/lib/srsly/dev/log
-  rm /var/lib/srsly/dev/log
-  rmdir /var/lib/srsly/dev
 end script
