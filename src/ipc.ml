@@ -32,3 +32,37 @@ module Slave_ops = struct
 end
 
 module Slave = Release_ipc.Make (Slave_ops)
+
+module Control_types = struct
+  type request
+    = Stop
+    | Reload
+
+  type response
+    = Stopped
+    | Reloaded
+end
+
+module Control_ops = struct
+  include Control_types
+
+  let string_of_request = function
+    | Stop -> "s"
+    | Reload -> "r"
+
+  let request_of_string = function
+    | "s" -> Stop
+    | "r" -> Reload
+    | other -> failwith (sprintf "unexpected request: '%s'" other) 
+
+  let string_of_response = function
+    | Stopped -> "S"
+    | Reloaded -> "R"
+
+  let response_of_string = function
+    | "S" -> Stopped
+    | "R" -> Reloaded
+    | other -> failwith (sprintf "unexpected response: '%s'" other)
+end
+
+module Control = Release_ipc.Make (Control_ops)

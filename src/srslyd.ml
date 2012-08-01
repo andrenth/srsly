@@ -1,8 +1,9 @@
 open Lwt
 open Printf
+open Ipc.Control_types
 open Ipc.Slave_types
 
-let milters = ["srsly_milter_in.native"; "srsly_milter_out.native"]
+let milters = ["srsly_in.native"; "srsly_out.native"]
 
 let slave_connections = ref (fun () -> [])
 
@@ -23,20 +24,17 @@ let read_srs_secrets () =
     close_in ch);
   !secret, List.rev !secrets
 
+let send_to_slaves msg =
+  Lwt_list.iter_p
+    (fun fd -> Ipc.Slave.write_response fd msg)
+    (!slave_connections ())
+
 let reload_config () =
   Config.reload ();
-  let send_configuration fd =
-    Ipc.Slave.write_response fd (Configuration (Config.current ())) in
-  Lwt_list.iter_p send_configuration (!slave_connections ())
+  send_to_slaves (Configuration (Config.current ()))
 
 let reload_srs_secrets () =
-  let send_secrets fd =
-    Ipc.Slave.write_response fd (SRS_secrets (read_srs_secrets ())) in
-  Lwt_list.iter_p send_secrets (!slave_connections ())
-
-let handle_sigterm _ =
-  ignore_result (Lwt_log.notice "got SIGTERM, exiting");
-  exit 0
+  send_to_slaves (SRS_secrets (read_srs_secrets ()))
 
 let handle_sighup _ =
   ignore_result (
@@ -56,14 +54,28 @@ let slave_ipc_handler fd =
         return (SRS_secrets (read_srs_secrets ())) in
   Ipc.Slave.handle_request fd handler
 
+let control_connection_handler fd =
+  let handler = function
+    | Stop ->
+        lwt () = Lwt_log.notice "received stop command" in
+        (* Suicide. Release will catch SIGTERM and kill the slaves *)
+        Unix.kill (Unix.getpid ()) 15;
+        lwt () = Lwt_unix.sleep 1.0 in (* give the signal handler time to run *)
+        raise_lwt (Failure "I'm already dead!")
+    | Reload ->
+        lwt () = reload_config () in
+        return Reloaded in
+  Ipc.Control.handle_request ~eof_warning:false ~timeout:5. fd handler
+
 let main get_conns =
-  ignore (Lwt_unix.on_signal Sys.sigterm handle_sigterm);
   ignore (Lwt_unix.on_signal Sys.sighup handle_sighup);
   slave_connections := get_conns;
   return ()
 
 let () =
   ignore_result (Lwt_log.notice "starting up");
+  if Array.length Sys.argv > 1 then
+    Config.file := Sys.argv.(1);
   let slaves =
     List.map
       (fun slave ->
@@ -73,6 +85,7 @@ let () =
   Release.master_slaves
     ~background:(Config.background ())
     ~lock_file:(Config.lock_file ())
+    ~control:(Config.control_socket (), control_connection_handler)
     ~syslog:true
     ~main:main
     ~slaves:slaves

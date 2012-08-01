@@ -1,5 +1,7 @@
 type t
 
+val file : Lwt_io.file_name ref
+val default_config_file : string
 val current : unit -> t
 val reload : unit -> unit
 val replace : t -> unit
@@ -8,6 +10,7 @@ val unserialize : string -> int -> t
 val lock_file : unit -> Lwt_io.file_name
 val user : unit -> string
 val binary_path : unit -> string
+val control_socket : unit -> string
 val log_level : unit -> Lwt_log.level
 val local_whitelist : unit -> Network.t list
 val relay_whitelist : unit -> Network.t list

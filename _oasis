@@ -62,3 +62,23 @@ Executable "srsly-out"
                    lwt.unix,
                    lwt.syntax,
                    lwt.preemptive
+
+Executable "srsly"
+  Path:            src
+  BuildTools:      ocamlbuild
+  MainIs:          srsly.ml
+  Install:         true
+  CompiledObject:  best
+  BuildDepends:    milter,
+                   spf,
+                   srs,
+                   str,
+                   unix,
+                   threads,
+                   uint.uint32,
+                   uint.uint128,
+                   release,
+                   release.config,
+                   lwt,
+                   lwt.unix,
+                   lwt.syntax
