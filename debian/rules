@@ -16,12 +16,13 @@ override_dh_auto_install:
 	install -d -m0755 $(BUILD_DIR)/usr/lib/srsly
 	install -d -m0755 $(BUILD_DIR)/usr/sbin
 	install -d -m0755 $(BUILD_DIR)/var/lib/srsly
-	install -m0600 etc/srslyd.conf $(BUILD_DIR)/etc/srsly/srslyd.conf
 	install -m0644 debian/rsyslog.conf $(BUILD_DIR)/etc/rsyslog.d/srsly.conf
-	install -m0700 _build/src/srsly.native $(BUILD_DIR)/usr/sbin/srsly
-	install -m0700 _build/src/srsly_in.native $(BUILD_DIR)/usr/lib/srsly/srsly_in
-	install -m0700 _build/src/srsly_out.native $(BUILD_DIR)/usr/lib/srsly/srsly_out
-	install -m0700 _build/src/srslyd.native $(BUILD_DIR)/usr/lib/srsly/srslyd
+	install -m0644 etc/srslyd.conf $(BUILD_DIR)/etc/srsly/srslyd.conf
+	touch $(BUILD_DIR)/etc/srsly/srs_secrets
+	install -m0755 _build/src/srsly.native $(BUILD_DIR)/usr/sbin/srsly
+	install -m0755 _build/src/srsly_in.native $(BUILD_DIR)/usr/lib/srsly/srsly_in
+	install -m0755 _build/src/srsly_out.native $(BUILD_DIR)/usr/lib/srsly/srsly_out
+	install -m0755 _build/src/srslyd.native $(BUILD_DIR)/usr/lib/srsly/srslyd
 
 override_dh_auto_clean:
 	ocaml setup.ml -distclean

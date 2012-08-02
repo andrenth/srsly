@@ -1,0 +1,29 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+  purge|remove)
+    deluser --quiet --system srsly > /dev/null || true
+    delgroup --quiet --system srsly > /dev/null || true
+    rm -f /var/run/srslyd.pid /var/run/srsly.socket
+    dpkg-statoverride --remove /etc/srsly/srslyd.conf >/dev/null 2>&1 || true
+    dpkg-statoverride --remove /etc/srsly/srs_secrets >/dev/null 2>&1 || true
+    dpkg-statoverride --remove /var/lib/srsly >/dev/null 2>&1 || true
+    for exec in /usr/lib/srsly/* /usr/sbin/srsly; do
+      dpkg-statoverride --remove $exec >/dev/null 2>&1 || true
+    done
+  ;;
+
+  upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+  ;;
+
+  *)
+    echo "postrm called with unknown argument \`$1'" >&2
+    exit 1
+  ;;
+esac
+
+#DEBHELPER#
+
+exit 0
