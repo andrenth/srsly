@@ -9,7 +9,8 @@ val serialize : t -> string
 val unserialize : string -> int -> t
 val lock_file : unit -> Lwt_io.file_name
 val user : unit -> string
-val binary_path : unit -> string
+val milter_in_executable : unit -> string
+val milter_out_executable : unit -> string
 val control_socket : unit -> string
 val log_level : unit -> Lwt_log.level
 val local_whitelist : unit -> Network.t list

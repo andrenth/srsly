@@ -8,7 +8,8 @@ module O = Release_option
 type t =
   { lock_file              : Lwt_io.file_name
   ; user                   : string
-  ; binary_path            : Lwt_io.file_name
+  ; milter_in_executable   : Lwt_io.file_name
+  ; milter_out_executable  : Lwt_io.file_name
   ; control_socket         : Lwt_io.file_name
   ; background             : bool
   ; log_level              : Lwt_log.level
@@ -52,6 +53,11 @@ let socket_string = function
   | _ ->
       invalid_arg "socket_string: not a string"
 
+let local_addresses =
+  [ "127.0.0.0/8"
+  ; "::ffff:127.0.0.0/104"
+  ]
+
 let secure_secret_file =
   [ file_with_mode 0o600
   ; file_with_owner "root"
@@ -59,15 +65,15 @@ let secure_secret_file =
   ; nonempty_file
   ]
 
-let local_addresses =
-  [ "127.0.0.0/8"
-  ; "::ffff:127.0.0.0/104"
+let secure_executable =
+  [ file_with_mode 0o700
+  ; file_with_owner "root"
+  ; file_with_group "root"
   ]
 
 module D = struct
   let lock_file = default_string "/var/run/srslyd/srslyd.pid"
   let user = default_string "srslyd"
-  let binary_path = default_string "/usr/lib/srslyd"
   let control_socket = default_string "/var/run/srslyd.sock"
   let log_level = default_string "notice"
   let fail_on_helo = default_bool true
@@ -84,7 +90,8 @@ let spec =
   [`Global
     [ `Optional ("lock_file", D.lock_file, [existing_dirname])
     ; `Optional ("user", D.user, [unprivileged_user])
-    ; `Optional ("binary_path", D.binary_path, [existing_directory])
+    ; `Required ("milter_in_executable", secure_executable)
+    ; `Required ("milter_out_executable", secure_executable)
     ; `Optional ("control_socket", D.control_socket, [existing_dirname])
     ; `Optional ("log_level", D.log_level, [string_in log_levels])
     ; `Optional ("fail_on_helo_temperror", D.fail_on_helo, [bool])
@@ -122,7 +129,8 @@ let whitelist_of_list = List.map Network.of_string
 let make c =
   let lock_file = string_value (find "lock_file" c) in
   let user = string_value (find "user" c) in
-  let binary_path = string_value (find "binary_path" c) in
+  let milter_in_executable = string_value (find "milter_in_executable" c) in
+  let milter_out_executable = string_value (find "milter_out_executable" c) in
   let control_socket = string_value (find "control_socket" c) in
   let background = bool_value (find "background" c) in
   let log_level = log_level_of_string (string_value (find "log_level" c)) in
@@ -141,7 +149,8 @@ let make c =
   let milter_debug_level = int_value (find "milter_debug_level" c) in
   { lock_file              = lock_file
   ; user                   = user
-  ; binary_path            = binary_path
+  ; milter_in_executable   = milter_in_executable
+  ; milter_out_executable  = milter_out_executable
   ; control_socket         = control_socket
   ; background             = background
   ; log_level              = log_level
@@ -194,8 +203,11 @@ let lock_file () =
 let user () =
   (current ()).user
 
-let binary_path () =
-  (current ()).binary_path
+let milter_in_executable () =
+  (current ()).milter_in_executable
+
+let milter_out_executable () =
+  (current ()).milter_out_executable
 
 let control_socket () =
   (current ()).control_socket

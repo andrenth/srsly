@@ -3,8 +3,6 @@ open Printf
 open Ipc.Control_types
 open Ipc.Slave_types
 
-let milters = ["srsly_in.native"; "srsly_out.native"]
-
 let slave_connections = ref (fun () -> [])
 
 let read_srs_secrets () = 
@@ -77,11 +75,8 @@ let () =
   if Array.length Sys.argv > 1 then
     Config.file := Sys.argv.(1);
   let slaves =
-    List.map
-      (fun slave ->
-        let path = sprintf "%s/%s" (Config.binary_path ()) slave in
-        (path, slave_ipc_handler, 1))
-      milters in
+    [ Config.milter_in_executable (), slave_ipc_handler, 1
+    ; Config.milter_out_executable (), slave_ipc_handler, 1 ] in
   Release.master_slaves
     ~background:(Config.background ())
     ~lock_file:(Config.lock_file ())
