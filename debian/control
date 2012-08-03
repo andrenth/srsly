@@ -10,7 +10,8 @@ Build-Depends:
 #  libuint-ocaml-dev (>= 1.0.1),
 #  libmilter-ocaml-dev,
 #  libspf-ocaml-dev,
-#  libsrs-ocaml-dev
+#  libsrs-ocaml-dev,
+#  libsyslog-ocaml-dev
 Standards-Version: 3.9.3
 
 Package: srsly

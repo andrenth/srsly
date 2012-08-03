@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: fe4785cab3a49843f5d4cb0d96950236)
+# DO NOT EDIT (digest: bbac4cda5769116b6566e9c8ae0cd0d9)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -37,6 +37,7 @@
 <src/srsly_in.{native,byte}>: pkg_lwt
 <src/srsly_in.{native,byte}>: pkg_lwt.unix
 <src/srsly_in.{native,byte}>: pkg_lwt.syntax
+<src/srsly_in.{native,byte}>: pkg_syslog
 <src/srsly_in.{native,byte}>: pkg_lwt.preemptive
 # Executable srsly-out
 <src/srsly_out.{native,byte}>: pkg_milter
@@ -52,7 +53,9 @@
 <src/srsly_out.{native,byte}>: pkg_lwt
 <src/srsly_out.{native,byte}>: pkg_lwt.unix
 <src/srsly_out.{native,byte}>: pkg_lwt.syntax
+<src/srsly_out.{native,byte}>: pkg_syslog
 <src/srsly_out.{native,byte}>: pkg_lwt.preemptive
+<src/*.ml{,i}>: pkg_syslog
 <src/*.ml{,i}>: pkg_lwt.preemptive
 # Executable srsly
 <src/srsly.{native,byte}>: pkg_milter

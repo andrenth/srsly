@@ -11,6 +11,7 @@ To build srsly you need to install its dependencies:
 
 * [lwt](http://ocsigen.org/lwt/)
 * [extunix](http://extunix.forge.ocamlcore.org/)
+* [ocaml-syslog](http://homepage.mac.com/letaris)
 * [ocaml-uint](https://github.com/andrenth/ocaml-uint)
 * [release](https://github.com/andrenth/release)
 * [ocaml-milter](https://github.com/andrenth/ocaml-milter)
