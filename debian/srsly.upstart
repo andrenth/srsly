@@ -13,11 +13,11 @@ pre-start script
 
   # setup the chroot area
 
-  /usr/bin/touch /var/lib/srsly/etc/resolv.conf
-  /bin/mount -o bind /etc/resolv.conf /var/lib/srsly/etc/resolv.conf
+  touch /var/lib/srsly/etc/resolv.conf
+  mount -o bind /etc/resolv.conf /var/lib/srsly/etc/resolv.conf
 
-  /usr/bin/touch /var/lib/srsly/etc/hosts
-  /bin/mount -o bind /etc/hosts /var/lib/srsly/etc/hosts
+  touch /var/lib/srsly/etc/hosts
+  mount -o bind /etc/hosts /var/lib/srsly/etc/hosts
 
   libpath=/lib
   if [ "`uname -m`" = "x86_64" ]; then
@@ -25,8 +25,8 @@ pre-start script
   fi
   for src in `ls $libpath/libresolv*.so $libpath/libnss_dns*.so`; do
     dst=/var/lib/srsly/lib/${src##*/}
-    /usr/bin/touch $dst
-    /bin/mount -o bind $src $dst
+    touch $dst
+    mount -o bind $src $dst
   done
 end script
 
@@ -35,9 +35,9 @@ script
 end script
 
 post-stop script
-  /bin/umount /var/lib/srsly/etc/*
-  /bin/rm /var/lib/srsly/etc/*
+  umount /var/lib/srsly/etc/*
+  rm /var/lib/srsly/etc/*
 
-  /bin/umount /var/lib/srsly/lib/*
-  /bin/rm /var/lib/srsly/lib/*
+  umount /var/lib/srsly/lib/*
+  rm /var/lib/srsly/lib/*
 end script
