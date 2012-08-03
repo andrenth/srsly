@@ -11,7 +11,7 @@ case "$1" in
       dpkg-statoverride --update --add root root 0600 /etc/srsly/srs_secrets
     fi
     if ! dpkg-statoverride --list /var/lib/srsly >/dev/null 2>&1; then
-      dpkg-statoverride --update --add root root 0700 /var/lib/srsly
+      dpkg-statoverride --update --add root root 0711 /var/lib/srsly
     fi
     for exec in /usr/lib/srsly/* /usr/sbin/srsly; do
       if ! dpkg-statoverride --list $exec >/dev/null 2>&1; then
