@@ -5,23 +5,6 @@ open Ipc.Slave_types
 
 let slave_connections = ref (fun () -> [])
 
-let read_srs_secrets () = 
-  let secret = ref "" in
-  let secrets = ref [] in
-  let ch = open_in (Config.srs_secret_file ()) in
-  let first = ref true in
-  (try
-    while true do
-      if !first then begin
-        secret := input_line ch;
-        first := false
-      end else
-        secrets := input_line ch :: !secrets
-    done
-  with End_of_file ->
-    close_in ch);
-  !secret, List.rev !secrets
-
 let send_to_slaves msg =
   Lwt_list.iter_p
     (fun fd -> Ipc.Slave.write_response fd msg)
@@ -32,7 +15,7 @@ let reload_config () =
   send_to_slaves (Configuration (Config.current ()))
 
 let reload_srs_secrets () =
-  send_to_slaves (SRS_secrets (read_srs_secrets ()))
+  send_to_slaves (SRS_secrets (Srs_util.read_srs_secrets ()))
 
 let handle_sighup _ =
   ignore_result (
@@ -49,7 +32,7 @@ let slave_ipc_handler fd =
   let handler = function
     | SRS_secrets_request ->
         lwt () = Lwt_log.info "sending SRS secrets to slave" in
-        return (SRS_secrets (read_srs_secrets ())) in
+        return (SRS_secrets (Srs_util.read_srs_secrets ())) in
   Ipc.Slave.handle_request fd handler
 
 let control_connection_handler fd =

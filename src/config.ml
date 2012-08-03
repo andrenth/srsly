@@ -22,6 +22,8 @@ type t =
   ; srs_hash_max_age       : int
   ; srs_hash_length        : int 
   ; srs_separator          : char
+  ; srs_secret_length      : int
+  ; random_device          : Lwt_io.file_name
   ; milter_debug_level     : int
   }
 
@@ -83,6 +85,8 @@ module D = struct
   let srs_hash_max_age = Some (`Int 8)
   let srs_hash_length = Some (`Int 8)
   let srs_separator = Some (`Str "=")
+  let srs_secret_length = Some (`Int 8)
+  let random_device = Some (`Str "/dev/random")
   let milter_debug_level = Some (`Int 0)
 end
 
@@ -105,6 +109,8 @@ let spec =
     ; `Optional ("srs_hash_max_age", D.srs_hash_max_age, [int])
     ; `Optional ("srs_hash_length", D.srs_hash_length, [int])
     ; `Optional ("srs_separator", D.srs_separator, [string_in ["+"; "-"; "="]])
+    ; `Optional ("srs_secret_length", D.srs_secret_length, [int])
+    ; `Optional ("random_device", D.random_device, [character_device])
     ; `Optional ("milter_debug_level", D.milter_debug_level,
                  [int_in_range (0, 6)])
     ]]
@@ -146,6 +152,8 @@ let make c =
   let srs_hash_max_age = int_value (find "srs_hash_max_age" c) in
   let srs_hash_length = int_value (find "srs_hash_length" c) in
   let srs_separator = (string_value (find "srs_separator" c)).[0] in
+  let srs_secret_length = int_value (find "srs_secret_length" c) in
+  let random_device = string_value (find "random_device" c) in
   let milter_debug_level = int_value (find "milter_debug_level" c) in
   { lock_file              = lock_file
   ; user                   = user
@@ -163,6 +171,8 @@ let make c =
   ; srs_hash_max_age       = srs_hash_max_age
   ; srs_hash_length        = srs_hash_length 
   ; srs_separator          = srs_separator
+  ; srs_secret_length      = srs_secret_length
+  ; random_device          = random_device
   ; milter_debug_level     = milter_debug_level
   }
 
@@ -247,6 +257,12 @@ let srs_hash_length () =
 
 let srs_separator () =
   (current ()).srs_separator
+
+let srs_secret_length () =
+  (current ()).srs_secret_length
+
+let random_device () =
+  (current ()).random_device
 
 let milter_debug_level () =
   (current ()).milter_debug_level

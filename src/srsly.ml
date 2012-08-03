@@ -34,9 +34,42 @@ let restart argcv =
   lwt () = stop () in
   start argcv
 
+let read_old_secrets () =
+  try
+    let st = Unix.lstat (Config.srs_secret_file ()) in
+    if st.Unix.st_size > 0 then
+      let old, older = Srs_util.read_srs_secrets () in
+      old::older
+    else
+      []
+  with _ ->
+    []
+
+let random_init () =
+  let random_dev = Config.random_device () in
+  let ch = open_in random_dev in
+  let seed = input_binary_int ch in
+  close_in ch;
+  Random.init seed
+
+let add_secret () =
+  let ascii_min = 0x21 in
+  let ascii_max = 0x7e in
+  let len = Config.srs_secret_length () in
+  let secret = String.create len in
+  random_init ();
+  for i = 0 to len - 1 do
+    secret.[i] <- char_of_int (ascii_min + Random.int (ascii_max - ascii_min))
+  done;
+  let old_secrets = read_old_secrets () in
+  let ch = open_out (Config.srs_secret_file ()) in
+  List.iter (fprintf ch "%s\n") (secret::old_secrets);
+  close_out ch;
+  control (fun fd -> Ipc.Control.write_request fd Reload)
+
 let usage rc =
   warn "usage: srsly <command> [/path/to/config/file]";
-  warn "  available commands: start, stop, reload, restart";
+  warn "  available commands: start, stop, reload, restart, add-secret";
   warn "  default configuration file: %s" Config.default_config_file;
   exit rc
 
@@ -57,6 +90,7 @@ let main argc argv =
   | "stop" ->  stop ()
   | "reload" -> reload ()
   | "restart" -> restart (srslyd_args argc argv)
+  | "add-secret" -> add_secret ()
   | "help" -> usage 0
   | _ -> usage 1
 
