@@ -3,6 +3,9 @@ description "srsly - SPF validator with SRS support"
 start on runlevel [2345]
 stop on runlevel [!2345]
 
+expect daemon
+respawn
+
 pre-start script
   test -x /usr/sbin/srsly || { stop; exit 0; }
   test -r /etc/srsly/srslyd.conf || { stop; exit 0; }
@@ -32,14 +35,9 @@ script
 end script
 
 post-stop script
-  /bin/umount /var/lib/srsly/etc/resolv.conf
-  /bin/rm /var/lib/srsly/etc/resolv.conf
+  /bin/umount /var/lib/srsly/etc/*
+  /bin/rm /var/lib/srsly/etc/*
 
-  /bin/umount /var/lib/srsly/etc/hosts
-  /bin/rm /var/lib/srsly/etc/hosts
-
-  for lib in `ls /var/lib/srsly/lib/*.so`; do
-    /bin/umount $lib
-    /bin/rm $lib
-  done
+  /bin/umount /var/lib/srsly/lib/*
+  /bin/rm /var/lib/srsly/lib/*
 end script
