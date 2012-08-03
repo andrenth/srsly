@@ -36,7 +36,7 @@ let open_log () =
   syslog := Some log
 
 let log level fmt =
-  ksprintf (Syslog.syslog (O.some !syslog) level) fmt
+  ksprintf (fun s -> Syslog.syslog (O.some !syslog) level (s^"\n")) fmt
 
 let close_log () =
   O.may Syslog.closelog !syslog
