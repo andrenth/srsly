@@ -12,6 +12,7 @@ type result
 type priv =
   { addr      : Unix.inet_addr
   ; helo      : string option
+  ; from      : string option
   ; rcpt      : (string * string) option
   ; is_bounce : bool
   ; result    : result
@@ -77,8 +78,17 @@ let spf_check ctx priv from =
 let milter_add_header ctx (field, value) =
   Milter.insheader ctx 1 field value
 
-let whitelist s =
-  Whitelisted s
+let whitelist h =
+  Whitelisted h
+
+let authentication_results ctx priv spf_res =
+  let myhostname = O.some (Milter.getsymval ctx "j") in
+  let res = SPF.string_of_result (SPF.result spf_res) in
+  let comm = SPF.header_comment spf_res in
+  let from = O.some priv.from in
+  let helo = O.some priv.helo in
+  sprintf "%s; spf=%s (%s) smtp.mailfrom=%s smtp.helo=%s"
+    myhostname res comm from helo
 
 (* Callbacks *)
 
@@ -90,6 +100,7 @@ let connect ctx host addr =
   let priv =
     { addr      = addr
     ; helo      = None
+    ; from      = None
     ; rcpt      = None
     ; is_bounce = false
     ; result    = result
@@ -119,7 +130,12 @@ let envfrom ctx from args =
            * connection, so ignore message-specific results. *)
           debug "doing SPF verification";
           let spf_res, milter_res = spf_check ctx priv (canonicalize from) in
-          { priv with result = Spf_response spf_res }, milter_res
+          let priv' =
+            { priv with
+              from = Some from
+            ; result = Spf_response spf_res
+            } in
+          priv', milter_res
       | Whitelisted _ ->
           (* Whitelists are IP-based, so just move on. *)
           debug "connect address is whitelisted";
@@ -162,7 +178,9 @@ let eom ctx =
           milter_add_header ctx header
       | Spf_response r ->
           info "SPF result: %s" (SPF.string_of_result (SPF.result r));
-          milter_add_header ctx (SPF.received_spf r));
+          let ar = authentication_results ctx priv r in
+          milter_add_header ctx ("Authentication-Results", ar);
+          milter_add_header ctx ("Received-SPF", SPF.received_spf_value r));
       priv, Milter.Continue)
 
 let abort ctx =
