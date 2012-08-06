@@ -8,7 +8,7 @@ let check_networks networks msg addr =
         None
     | net::rest ->
         if Network.includes addr net then
-          Some ("X-Comment: " ^ msg)
+          Some ("X-Comment:", msg)
         else
           check rest in
   check networks

@@ -1,1 +1,1 @@
-val check : Unix.inet_addr -> string option
+val check : Unix.inet_addr -> (string * string) option

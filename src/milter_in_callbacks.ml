@@ -6,7 +6,7 @@ module O = Release_option
 
 type result
   = No_result
-  | Whitelisted of string
+  | Whitelisted of (string * string)
   | Spf_response of SPF.response
 
 type priv =
@@ -74,10 +74,7 @@ let spf_check ctx priv from =
   | Milter.Continue -> spf_check_from ctx priv from
   | other -> spf_res, milter_res
 
-let milter_add_header ctx header =
-  let sep = String.index header ':' in
-  let field = String.sub header 0 sep in
-  let value = String.sub header (sep + 2) (String.length header - sep - 2) in
+let milter_add_header ctx (field, value) =
   Milter.insheader ctx 1 field value
 
 let whitelist s =
@@ -160,9 +157,9 @@ let eom ctx =
       (match priv.result with
       | No_result ->
           ()
-      | Whitelisted s ->
-          info "Whitelisted address: %s" s;
-          milter_add_header ctx s
+      | Whitelisted ((_, msg) as header) ->
+          info "Whitelisted address: %s" msg;
+          milter_add_header ctx header
       | Spf_response r ->
           info "SPF result: %s" (SPF.string_of_result (SPF.result r));
           milter_add_header ctx (SPF.received_spf r));
