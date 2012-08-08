@@ -1,16 +1,19 @@
 let read_srs_secrets () = 
-  let secret = ref "" in
+  let secret = ref None in
   let secrets = ref [] in
-  let ch = open_in (Config.srs_secret_file ()) in
-  let first = ref true in
+  let file = Config.srs_secret_file () in
+  let ch = open_in file in
   (try
     while true do
-      if !first then begin
-        secret := input_line ch;
-        first := false
-      end else
-        secrets := input_line ch :: !secrets
+      let line = input_line ch in
+      if line <> "" then
+        if !secret = None then
+          secret := Some line
+        else
+          secrets := line :: !secrets
     done
   with End_of_file ->
     close_in ch);
-  !secret, List.rev !secrets
+  match !secret with
+  | None -> failwith ("read_srs_secrets: no available secrets in " ^ file)
+  | Some s -> s, List.rev !secrets

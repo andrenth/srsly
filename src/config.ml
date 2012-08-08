@@ -64,7 +64,6 @@ let secure_secret_file =
   [ file_with_mode 0o600
   ; file_with_owner "root"
   ; file_with_group "root"
-  ; nonempty_file
   ]
 
 let secure_executable =
