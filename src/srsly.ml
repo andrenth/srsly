@@ -52,7 +52,7 @@ let random_init () =
   close_in ch;
   Random.init seed
 
-let add_secret () =
+let make_secret () =
   let ascii_min = 0x21 in
   let ascii_max = 0x7e in
   let len = Config.srs_secret_length () in
@@ -61,6 +61,13 @@ let add_secret () =
   for i = 0 to len - 1 do
     secret.[i] <- char_of_int (ascii_min + Random.int (ascii_max - ascii_min))
   done;
+  secret
+
+let new_secret () =
+  Lwt_io.printl (make_secret ())
+
+let add_secret () =
+  let secret = make_secret () in
   let old_secrets = read_old_secrets () in
   let ch = open_out (Config.srs_secret_file ()) in
   List.iter (fprintf ch "%s\n") (secret::old_secrets);
@@ -90,6 +97,7 @@ let main argc argv =
   | "stop" ->  stop ()
   | "reload" -> reload ()
   | "restart" -> restart (srslyd_args argc argv)
+  | "new-secret" -> new_secret ()
   | "add-secret" -> add_secret ()
   | "help" -> usage 0
   | _ -> usage 1
