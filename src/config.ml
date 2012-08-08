@@ -109,7 +109,7 @@ let spec =
     ; `Optional ("srs_hash_max_age", D.srs_hash_max_age, [int])
     ; `Optional ("srs_hash_length", D.srs_hash_length, [int])
     ; `Optional ("srs_separator", D.srs_separator, [string_in ["+"; "-"; "="]])
-    ; `Optional ("srs_secret_length", D.srs_secret_length, [int])
+    ; `Optional ("srs_secret_length", D.srs_secret_length, [int_greater_than 7])
     ; `Optional ("random_device", D.random_device, [character_device])
     ; `Optional ("milter_debug_level", D.milter_debug_level,
                  [int_in_range (0, 6)])
