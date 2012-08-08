@@ -12,6 +12,9 @@ pre-start script
 
   # setup the chroot area
 
+  touch /var/lib/srsly/dev/log
+  mount -o bind /dev/log /var/lib/srsly/dev/log
+
   touch /var/lib/srsly/etc/resolv.conf
   mount -o bind /etc/resolv.conf /var/lib/srsly/etc/resolv.conf
 
@@ -34,6 +37,9 @@ script
 end script
 
 post-stop script
+  umount /var/lib/srsly/dev/*
+  rm /var/lib/srsly/dev/*
+
   umount /var/lib/srsly/etc/*
   rm /var/lib/srsly/etc/*
 
