@@ -18,6 +18,9 @@ case "$1" in
         dpkg-statoverride --update --add root root 0700 $exec
       fi
     done
+    if [ ! -s /etc/srsly/srs_secrets ]; then
+      srsly new-secret > /etc/srsly/srs_secrets
+    fi
   ;;
 
   abort-upgrade|abort-remove|abort-deconfigure)
