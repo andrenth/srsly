@@ -23,6 +23,12 @@ val milter_input_listen_address : unit -> string
 val milter_output_listen_address : unit -> string
 val milter_debug_level : unit -> int
 
+val proxymap_lookup_table : unit -> string
+val proxymap_query_format : unit -> string
+val proxymap_result_format : unit -> string
+val proxymap_query_flags : unit -> int
+val proxymap_query_socket : unit -> Lwt_io.file_name
+ 
 val srs_domain : unit -> string option
 val srs_secret_file : unit -> Lwt_io.file_name
 val srs_hash_max_age : unit -> int

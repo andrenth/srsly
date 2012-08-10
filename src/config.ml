@@ -5,6 +5,14 @@ open Util
 
 module O = Release_option
 
+type proxymap_config =
+  { lookup_table  : string
+  ; query_format  : string
+  ; result_format : string
+  ; query_flags   : int
+  ; query_socket  : Lwt_io.file_name
+  }
+
 type milter_config =
   { user              : string
   ; input_executable  : Lwt_io.file_name
@@ -32,6 +40,7 @@ type t =
   ; relay_whitelist        : Network.t list
   ; random_device          : Lwt_io.file_name
   ; milter                 : milter_config
+  ; proxymap               : proxymap_config
   ; srs                    : srs_config
   }
 
@@ -80,6 +89,24 @@ let secure_executable =
   ; file_with_group "root"
   ]
 
+let postfix_table = function
+  | `Str s ->
+      if Str.string_match (Str.regexp "^[a-z]+:\\(.+\\)$") s 0 then
+        let file = Str.matched_group 1 s in
+        try
+          let st = Unix.lstat file in
+          if st.Unix.st_kind = Unix.S_REG then
+            `Valid
+          else
+            `Invalid (sprintf "postfix_table: %s is not a regular file" s)
+        with Unix.Unix_error (e, _, _) ->
+          `Invalid (sprintf "postfix_table: %s: %s" s (Unix.error_message e))
+      else
+        `Invalid
+          (sprintf "postfix_table: %s is not a valid postfix table" s)
+  | _ ->
+      invalid_arg "postfix_table: not a string"
+
 module D = struct
   let lock_file = default_string "/var/run/srslyd/srslyd.pid"
   let control_socket = default_string "/var/run/srslyd.sock"
@@ -94,6 +121,16 @@ end
 module MD = struct
   let user = default_string "srslyd"
   let debug_level = default_int 0
+end
+
+module PD = struct
+  let query_format = default_string
+    "request\000lookup\000table\000{t}\000flags\000{f}\000key\000{k}\000\000"
+  let result_format = default_string
+    "status\000{s}\000value\000{v}\000\000"
+  let query_flags = default_int
+    16448 (* DICT_FLAG_FOLD_FIX | DICT_FLAG_LOCK *)
+  let query_socket = default_string "/var/spool/postfix/private/proxymap"
 end
 
 module SD = struct
@@ -122,6 +159,13 @@ let spec =
       ; `Required ("output_listen_address", [socket_string])
       ; `Optional ("debug_level", MD.debug_level, [int_in_range (0, 6)])
       ])
+  ; `Required ("proxymap",
+      [ `Required ("lookup_table", [postfix_table])
+      ; `Optional ("query_format", PD.query_format, [string])
+      ; `Optional ("result_format", PD.result_format, [string])
+      ; `Optional ("query_flags", PD.query_flags, [int])
+      ; `Optional ("query_socket", PD.query_socket, [unix_socket])
+      ])
   ; `Required ("srs",
       [ `Optional ("domain", None, [string])
       ; `Required ("secret_file", secure_secret_file)
@@ -137,6 +181,9 @@ let find_srslyd key conf =
 
 let find_milter key conf =
   Release_config.get_exn conf ~section:"milter" key ()
+
+let find_proxymap key conf =
+  Release_config.get_exn conf ~section:"proxymap" key ()
 
 let find_srs key conf =
   Release_config.get_exn conf ~section:"srs" key () 
@@ -175,6 +222,13 @@ let make c =
     ; listen_address    = (milter_addr_in, milter_addr_out)
     ; debug_level       = int_value (find_milter "debug_level" c)
     } in
+  let proxymap_config =
+    { lookup_table = string_value (find_proxymap "lookup_table" c)
+    ; query_format = string_value (find_proxymap "query_format" c)
+    ; result_format = string_value (find_proxymap "result_format" c)
+    ; query_flags  = int_value (find_proxymap "query_flags" c)
+    ; query_socket = string_value (find_proxymap "query_socket" c)
+    } in
   let srs_config =
     { domain        = O.map string_value (find_srs_opt "domain" c)
     ; secret_file   = string_value (find_srs "secret_file" c)
@@ -192,6 +246,7 @@ let make c =
   ; relay_whitelist        = relay_whitelist
   ; random_device          = random_device
   ; milter                 = milter_config
+  ; proxymap               = proxymap_config
   ; srs                    = srs_config
   }
 
@@ -267,6 +322,21 @@ let milter_output_listen_address () =
 
 let milter_debug_level () =
   (current ()).milter.debug_level
+
+let proxymap_lookup_table () =
+  (current ()).proxymap.lookup_table
+
+let proxymap_query_format () =
+  (current ()).proxymap.query_format
+
+let proxymap_result_format () =
+  (current ()).proxymap.result_format
+
+let proxymap_query_flags () =
+  (current ()).proxymap.query_flags
+
+let proxymap_query_socket () =
+  (current ()).proxymap.query_socket
 
 let srs_domain () =
   (current ()).srs.domain

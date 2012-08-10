@@ -101,7 +101,7 @@ let rec ipc_reader fd =
 
 let main filter listen_addr fd =
   lwt () = Lwt_log.notice "starting up" in
-  setup_syslog ();
+  Log.setup ();
   lwt () = read_srs_secrets fd in
   let ipc_read_t = ipc_reader fd in
   Milter.setdbg (Config.milter_debug_level ());

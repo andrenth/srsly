@@ -94,3 +94,5 @@
 <src/srsly_milter_*.ml>: syntax_camlp4o
 <src/milter_util.ml>: syntax_camlp4o
 <src/srsly.ml>: syntax_camlp4o
+<src/proxymap.ml>: syntax_camlp4o
+<src/test.ml>: syntax_camlp4o
