@@ -24,6 +24,6 @@ let filter =
 let () =
   if Array.length Sys.argv > 1 then
     Config.file := Sys.argv.(1);
-  let main = Milter_util.main filter (Config.listen_address_in ()) in
+  let main = Milter_util.main filter (Config.milter_input_listen_address ()) in
   set_log_level (Config.log_level ());
-  Release.me ~syslog:true ~user:(Config.user ()) ~main:main ()
+  Release.me ~syslog:true ~user:(Config.milter_user ()) ~main:main ()

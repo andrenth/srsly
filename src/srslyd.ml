@@ -58,8 +58,8 @@ let () =
   if Array.length Sys.argv > 1 then
     Config.file := Sys.argv.(1);
   let slaves =
-    [ Config.milter_in_executable (), slave_ipc_handler, 1
-    ; Config.milter_out_executable (), slave_ipc_handler, 1 ] in
+    [ Config.milter_input_executable (), slave_ipc_handler, 1
+    ; Config.milter_output_executable (), slave_ipc_handler, 1 ] in
   Release.master_slaves
     ~background:(Config.background ())
     ~lock_file:(Config.lock_file ())
