@@ -5,20 +5,21 @@ open Util
 
 module O = Release_option
 
-type proxymap_config =
-  { lookup_table  : string
-  ; query_format  : string
-  ; result_format : string
-  ; query_flags   : int
-  ; query_socket  : Lwt_io.file_name
-  }
-
 type milter_config =
   { user              : string
   ; input_executable  : Lwt_io.file_name
   ; output_executable : Lwt_io.file_name
   ; listen_address    : string * string
   ; debug_level       : int
+  }
+
+type proxymap_config =
+  { lookup_table           : string
+  ; query_format           : string
+  ; result_format          : string
+  ; result_value_separator : string
+  ; query_flags            : int
+  ; query_socket           : Lwt_io.file_name
   }
 
 type srs_config =
@@ -128,6 +129,7 @@ module Proxymap_defaults = struct
     "request\000lookup\000table\000{t}\000flags\000{f}\000key\000{k}\000\000"
   let result_format = default_string
     "status\000{s}\000value\000{v}\000\000"
+  let result_value_separator = default_string ","
   let query_flags = default_int
     16448 (* DICT_FLAG_FOLD_FIX | DICT_FLAG_LOCK *)
   let query_socket = default_string "/var/spool/postfix/private/proxymap"
@@ -170,6 +172,7 @@ let proxymap_spec =
     [ `Required ("lookup_table", [postfix_table])
     ; `Optional ("query_format", D.query_format, [string])
     ; `Optional ("result_format", D.result_format, [string])
+    ; `Optional ("result_value_separator", D.result_value_separator, [string])
     ; `Optional ("query_flags", D.query_flags, [int])
     ; `Optional ("query_socket", D.query_socket, [unix_socket])
     ])
@@ -242,6 +245,8 @@ let make c =
     { lookup_table = string_value (find_proxymap "lookup_table" c)
     ; query_format = string_value (find_proxymap "query_format" c)
     ; result_format = string_value (find_proxymap "result_format" c)
+    ; result_value_separator =
+        string_value (find_proxymap "result_value_separator" c)
     ; query_flags  = int_value (find_proxymap "query_flags" c)
     ; query_socket = string_value (find_proxymap "query_socket" c)
     } in
@@ -347,6 +352,9 @@ let proxymap_query_format () =
 
 let proxymap_result_format () =
   (current ()).proxymap.result_format
+
+let proxymap_result_value_separator () =
+  (current ()).proxymap.result_value_separator
 
 let proxymap_query_flags () =
   (current ()).proxymap.query_flags

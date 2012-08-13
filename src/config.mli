@@ -26,6 +26,7 @@ val milter_debug_level : unit -> int
 val proxymap_lookup_table : unit -> string
 val proxymap_query_format : unit -> string
 val proxymap_result_format : unit -> string
+val proxymap_result_value_separator : unit -> string
 val proxymap_query_flags : unit -> int
 val proxymap_query_socket : unit -> Lwt_io.file_name
  
