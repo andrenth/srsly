@@ -82,17 +82,23 @@ let parse_result res fmt sep =
 
 let query key =
   let query_fmt = Config.proxymap_query_format () in
-  let table = Config.proxymap_lookup_table () in
+  let tables = Config.proxymap_lookup_tables () in
   let flags = Config.proxymap_query_flags () in
   let socket = Config.proxymap_query_socket () in
-  let req = build_request query_fmt table flags key in
-  let raw_res = make_request socket req in
-  let res_fmt = Config.proxymap_result_format () in
-  let sep = Config.proxymap_result_value_separator () in
-  let res = parse_result raw_res res_fmt sep in
-  if res.status = "0" then
-    Some res.value
-  else begin
-    Log.warning "Proxymap.query: %s" (status_message res.status);
-    None
-  end
+  let rec run_query = function
+    | [] ->
+        None
+    | t::ts ->
+        let req = build_request query_fmt t flags key in
+        let raw_res = make_request socket req in
+        let res_fmt = Config.proxymap_result_format () in
+        let sep = Config.proxymap_result_value_separator () in
+        let res = parse_result raw_res res_fmt sep in
+        if res.status = "0" then
+          Some res.value
+        else begin
+          if res.status <> "1" then 
+            Log.warning "Proxymap.query: %s" (status_message res.status);
+          run_query ts
+        end in
+  run_query tables

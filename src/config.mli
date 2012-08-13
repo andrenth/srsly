@@ -23,7 +23,7 @@ val milter_input_listen_address : unit -> string
 val milter_output_listen_address : unit -> string
 val milter_debug_level : unit -> int
 
-val proxymap_lookup_table : unit -> string
+val proxymap_lookup_tables : unit -> string list
 val proxymap_query_format : unit -> string
 val proxymap_result_format : unit -> string
 val proxymap_result_value_separator : unit -> string

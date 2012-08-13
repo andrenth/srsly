@@ -14,7 +14,7 @@ type milter_config =
   }
 
 type proxymap_config =
-  { lookup_table           : string
+  { lookup_tables          : string list
   ; query_format           : string
   ; result_format          : string
   ; result_value_separator : string
@@ -106,7 +106,20 @@ let postfix_table = function
         `Invalid
           (sprintf "postfix_table: %s is not a valid postfix table" s)
   | _ ->
-      invalid_arg "postfix_table: not a string"
+      `Invalid "postfix_table: not a string"
+
+let postfix_tables = function
+  | `List ts ->
+      let rec validate = function
+        | [] ->
+            `Valid
+        | t::ts ->
+            match postfix_table t with
+            | `Valid -> validate ts
+            | `Invalid reason -> `Invalid reason in
+      validate ts
+  | _ ->
+      `Invalid "postfix_tables: not a list"
 
 module Srslyd_defaults = struct
   let lock_file = default_string "/var/run/srslyd/srslyd.pid"
@@ -169,7 +182,7 @@ let milter_spec =
 let proxymap_spec =
   let module D = Proxymap_defaults in
   `Required ("proxymap",
-    [ `Required ("lookup_table", [postfix_table])
+    [ `Required ("lookup_tables", [postfix_tables])
     ; `Optional ("query_format", D.query_format, [string])
     ; `Optional ("result_format", D.result_format, [string])
     ; `Optional ("result_value_separator", D.result_value_separator, [string])
@@ -242,7 +255,7 @@ let make c =
     ; debug_level       = int_value (find_milter "debug_level" c)
     } in
   let proxymap_config =
-    { lookup_table = string_value (find_proxymap "lookup_table" c)
+    { lookup_tables = string_list_value (find_proxymap "lookup_tables" c)
     ; query_format = string_value (find_proxymap "query_format" c)
     ; result_format = string_value (find_proxymap "result_format" c)
     ; result_value_separator =
@@ -344,8 +357,8 @@ let milter_output_listen_address () =
 let milter_debug_level () =
   (current ()).milter.debug_level
 
-let proxymap_lookup_table () =
-  (current ()).proxymap.lookup_table
+let proxymap_lookup_tables () =
+  (current ()).proxymap.lookup_tables
 
 let proxymap_query_format () =
   (current ()).proxymap.query_format
