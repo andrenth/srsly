@@ -107,7 +107,7 @@ let postfix_table = function
   | _ ->
       invalid_arg "postfix_table: not a string"
 
-module D = struct
+module Srslyd_defaults = struct
   let lock_file = default_string "/var/run/srslyd/srslyd.pid"
   let control_socket = default_string "/var/run/srslyd.sock"
   let log_level = default_string "notice"
@@ -118,12 +118,12 @@ module D = struct
   let random_device = default_string "/dev/random"
 end
 
-module MD = struct
+module Milter_defaults = struct
   let user = default_string "srslyd"
   let debug_level = default_int 0
 end
 
-module PD = struct
+module Proxymap_defaults = struct
   let query_format = default_string
     "request\000lookup\000table\000{t}\000flags\000{f}\000key\000{k}\000\000"
   let result_format = default_string
@@ -133,47 +133,63 @@ module PD = struct
   let query_socket = default_string "/var/spool/postfix/private/proxymap"
 end
 
-module SD = struct
+module SRS_defaults = struct
   let hash_max_age = default_int 8
   let hash_length = default_int 8
   let separator = default_string "="
   let secret_length = default_int 8
 end
 
+let srslyd_spec =
+  let module D = Srslyd_defaults in
+  `Required ("srslyd",
+    [ `Optional ("lock_file", D.lock_file, [existing_dirname])
+    ; `Optional ("control_socket", D.control_socket, [existing_dirname])
+    ; `Optional ("log_level", D.log_level, [string_in log_levels])
+    ; `Optional ("fail_on_helo_temperror", D.fail_on_helo, [bool])
+    ; `Optional ("local_whitelist", D.local_whitelist, [string_list])
+    ; `Optional ("relay_whitelist", D.relay_whitelist, [string_list])
+    ; `Optional ("background", D.background, [bool])
+    ; `Optional ("random_device", D.random_device, [character_device])
+    ])
+
+let milter_spec =
+  let module D = Milter_defaults in
+  `Required ("milter",
+    [ `Optional ("user", D.user, [unprivileged_user])
+    ; `Required ("input_executable", secure_executable)
+    ; `Required ("output_executable", secure_executable)
+    ; `Required ("input_listen_address", [socket_string])
+    ; `Required ("output_listen_address", [socket_string])
+    ; `Optional ("debug_level", D.debug_level, [int_in_range (0, 6)])
+    ])
+
+let proxymap_spec =
+  let module D = Proxymap_defaults in
+  `Required ("proxymap",
+    [ `Required ("lookup_table", [postfix_table])
+    ; `Optional ("query_format", D.query_format, [string])
+    ; `Optional ("result_format", D.result_format, [string])
+    ; `Optional ("query_flags", D.query_flags, [int])
+    ; `Optional ("query_socket", D.query_socket, [unix_socket])
+    ])
+
+let srs_spec =
+  let module D = SRS_defaults in
+  `Required ("srs",
+    [ `Optional ("domain", None, [string])
+    ; `Required ("secret_file", secure_secret_file)
+    ; `Optional ("hash_max_age", D.hash_max_age, [int])
+    ; `Optional ("hash_length", D.hash_length, [int])
+    ; `Optional ("separator", D.separator, [string_in ["+"; "-"; "="]])
+    ; `Optional ("secret_length", D.secret_length, [int_greater_than 7])
+    ])
+
 let spec =
-  [ `Required ("srslyd",
-      [ `Optional ("lock_file", D.lock_file, [existing_dirname])
-      ; `Optional ("control_socket", D.control_socket, [existing_dirname])
-      ; `Optional ("log_level", D.log_level, [string_in log_levels])
-      ; `Optional ("fail_on_helo_temperror", D.fail_on_helo, [bool])
-      ; `Optional ("local_whitelist", D.local_whitelist, [string_list])
-      ; `Optional ("relay_whitelist", D.relay_whitelist, [string_list])
-      ; `Optional ("background", D.background, [bool])
-      ; `Optional ("random_device", D.random_device, [character_device])
-      ])
-  ; `Required ("milter",
-      [ `Optional ("user", MD.user, [unprivileged_user])
-      ; `Required ("input_executable", secure_executable)
-      ; `Required ("output_executable", secure_executable)
-      ; `Required ("input_listen_address", [socket_string])
-      ; `Required ("output_listen_address", [socket_string])
-      ; `Optional ("debug_level", MD.debug_level, [int_in_range (0, 6)])
-      ])
-  ; `Required ("proxymap",
-      [ `Required ("lookup_table", [postfix_table])
-      ; `Optional ("query_format", PD.query_format, [string])
-      ; `Optional ("result_format", PD.result_format, [string])
-      ; `Optional ("query_flags", PD.query_flags, [int])
-      ; `Optional ("query_socket", PD.query_socket, [unix_socket])
-      ])
-  ; `Required ("srs",
-      [ `Optional ("domain", None, [string])
-      ; `Required ("secret_file", secure_secret_file)
-      ; `Optional ("hash_max_age", SD.hash_max_age, [int])
-      ; `Optional ("hash_length", SD.hash_length, [int])
-      ; `Optional ("separator", SD.separator, [string_in ["+"; "-"; "="]])
-      ; `Optional ("secret_length", SD.secret_length, [int_greater_than 7])
-      ])
+  [ srslyd_spec
+  ; milter_spec
+  ; proxymap_spec
+  ; srs_spec
   ]
 
 let find_srslyd key conf =
