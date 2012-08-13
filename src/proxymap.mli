@@ -1,1 +1,1 @@
-val query : string -> string option
+val query : string -> string list option

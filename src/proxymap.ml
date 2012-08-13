@@ -37,15 +37,15 @@ let status_message = function
 
 type result =
   { status : string
-  ; value  : string
+  ; value  : string list
   }
 
 (* This parser doesn't take advantage of the null-byte separator of the
  * postfix query format because there's no guarantee it's not going to
  * change in the future. *)
-
-let parse_result res fmt =
+let parse_result res fmt sep =
   let results = Hashtbl.create 2 in
+  let sep_re = Str.regexp sep in
   let set_result k v =
     if Hashtbl.mem results k then
       failwith (sprintf "parse_result: key {%s} already set" k)
@@ -76,7 +76,7 @@ let parse_result res fmt =
   try
     let status = Hashtbl.find results "s" in
     let value = Hashtbl.find results "v" in
-    { status = status; value = value }
+    { status = status; value = (Str.split sep_re value) }
   with Not_found ->
     failwith (sprintf "parse_result: missing keys")
 
@@ -88,7 +88,8 @@ let query key =
   let req = build_request query_fmt table flags key in
   let raw_res = make_request socket req in
   let res_fmt = Config.proxymap_result_format () in
-  let res = parse_result raw_res res_fmt in
+  let sep = Config.proxymap_result_value_separator () in
+  let res = parse_result raw_res res_fmt sep in
   if res.status = "0" then
     Some res.value
   else begin
