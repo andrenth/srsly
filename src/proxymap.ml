@@ -2,7 +2,13 @@ open Lwt
 open Printf
 
 let build_request fmt table flags key =
-  let s = Str.global_replace (Str.regexp "\\{t\\}") table fmt in
+  let i = ref 1 in
+  let escape s =
+    let c = Str.matched_group 1 s in
+    incr i;
+    sprintf "%c" (char_of_int (int_of_string c)) in
+  let s = Str.global_substitute (Str.regexp "\\\\\\([0-9]+\\)") escape fmt in
+  let s = Str.global_replace (Str.regexp "\\{t\\}") table s in
   let s = Str.global_replace (Str.regexp "\\{f\\}") (string_of_int flags) s in
   let s = Str.global_replace (Str.regexp "\\{k\\}") key s in
   s
