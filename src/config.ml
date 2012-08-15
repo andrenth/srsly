@@ -18,6 +18,7 @@ type proxymap_config =
   ; query_format           : string
   ; result_format          : string
   ; result_value_separator : string
+  ; local_user_matches     : string
   ; query_flags            : int
   ; query_socket           : Lwt_io.file_name
   }
@@ -186,6 +187,7 @@ let proxymap_spec =
     ; `Optional ("query_format", D.query_format, [string])
     ; `Optional ("result_format", D.result_format, [string])
     ; `Optional ("result_value_separator", D.result_value_separator, [string])
+    ; `Required ("local_user_matches", [string])
     ; `Optional ("query_flags", D.query_flags, [int])
     ; `Optional ("query_socket", D.query_socket, [unix_socket])
     ])
@@ -260,6 +262,7 @@ let make c =
     ; result_format = string_value (find_proxymap "result_format" c)
     ; result_value_separator =
         string_value (find_proxymap "result_value_separator" c)
+    ; local_user_matches = string_value (find_proxymap "local_user_matches" c)
     ; query_flags  = int_value (find_proxymap "query_flags" c)
     ; query_socket = string_value (find_proxymap "query_socket" c)
     } in
@@ -368,6 +371,9 @@ let proxymap_result_format () =
 
 let proxymap_result_value_separator () =
   (current ()).proxymap.result_value_separator
+
+let proxymap_local_user_matches () =
+  (current ()).proxymap.local_user_matches
 
 let proxymap_query_flags () =
   (current ()).proxymap.query_flags
