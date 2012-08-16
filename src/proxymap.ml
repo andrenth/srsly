@@ -102,3 +102,36 @@ let query key =
           run_query ts
         end in
   run_query tables
+
+let (=~) s re =
+  try
+    ignore (Str.search_forward re s 0);
+    true
+  with Not_found ->
+    false
+
+let at_re = Str.regexp "@"
+
+let local_user_regexp user =
+  let pat = Config.proxymap_local_user_matches () in
+  let replace_user u s =
+    Str.global_replace (Str.regexp "\\{u\\}") u s in
+  let replace_domain d s =
+    Str.global_replace (Str.regexp "\\{d\\}") d s in
+  let pat =
+    match Str.split at_re user with
+    | [u] -> replace_user u pat
+    | [u; d] -> replace_user u (replace_domain d pat)
+    | _ -> invalid_arg ("Proxymap.is_local: unexpected argument: " ^ user) in
+  Str.regexp pat
+
+let is_remote user =
+  let re = local_user_regexp user in
+  let rec remote u =
+    if u =~ re then
+      false
+    else
+      match query u with
+      | None -> true
+      | Some aliases -> List.exists remote aliases in
+  remote user

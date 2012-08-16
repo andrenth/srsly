@@ -12,8 +12,9 @@ type result
 type priv =
   { addr      : Unix.inet_addr
   ; helo      : string option
-  ; from      : string option
-  ; rcpt      : (string * string) option
+  ; from      : (string * bool) option
+  ; rcpts     : (string * bool) list
+  ; rev_rcpt  : string option
   ; is_bounce : bool
   ; result    : result
   }
@@ -78,6 +79,11 @@ let spf_check ctx priv from =
 let milter_add_header ctx (field, value) =
   Milter.insheader ctx 1 field value
 
+let set_reverse_srs_rcpt ctx rcpt rev_rcpt =
+  info "replacing bounce destination '%s' with '%s'" rcpt rev_rcpt;
+  Milter.delrcpt ctx rcpt;
+  Milter.addrcpt ctx rev_rcpt
+
 let whitelist h =
   Whitelisted h
 
@@ -85,10 +91,27 @@ let authentication_results ctx priv spf_res =
   let myhostname = O.some (Milter.getsymval ctx "j") in
   let res = SPF.string_of_result (SPF.result spf_res) in
   let comm = SPF.header_comment spf_res in
-  let from = O.some priv.from in
+  let from = fst (O.some priv.from) in
   let helo = O.some priv.helo in
   sprintf "%s; spf=%s (%s) smtp.mailfrom=%s smtp.helo=%s"
     myhostname res comm from helo
+
+let add_rcpt rcpt (rcpts, n) =
+  rcpts.(!n) <- (rcpt, Proxymap.is_remote rcpt);
+  incr n
+
+(*
+ * We choose a random domain to be used as the SRS forward domain.
+ * This is done because there's no way to associate each of the original
+ * recipients to the final addresses after virtual alias translation
+ * is done.
+ *)
+let choose_forward_domain rcpts =
+  let arr = Array.of_list rcpts in
+  let i = Random.int (Array.length arr) in
+  let rcpt, _ = arr.(i) in
+  let at = String.index rcpt '@' in
+  String.sub rcpt (at+1) (String.length rcpt - at - 1)
 
 (* Callbacks *)
 
@@ -101,7 +124,8 @@ let connect ctx host addr =
     { addr      = addr
     ; helo      = None
     ; from      = None
-    ; rcpt      = None
+    ; rcpts     = []
+    ; rev_rcpt  = None
     ; is_bounce = false
     ; result    = result
     } in
@@ -123,19 +147,19 @@ let envfrom ctx from args =
   debug "envfrom callback: from=%s" from;
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
-      let priv = { priv with is_bounce = from = "<>" } in
+      let from = canonicalize from in
+      let priv =
+        { priv with
+          from = Some (from, Proxymap.is_remote from)
+        ; is_bounce = from = ""
+        } in
       match priv.result with
       | No_result | Spf_response _ ->
           (* This callback may be called multiple times in the same
            * connection, so ignore message-specific results. *)
           debug "doing SPF verification";
-          let spf_res, milter_res = spf_check ctx priv (canonicalize from) in
-          let priv' =
-            { priv with
-              from = Some from
-            ; result = Spf_response spf_res
-            } in
-          priv', milter_res
+          let spf_res, milter_res = spf_check ctx priv from in
+          { priv with result = Spf_response spf_res }, milter_res
       | Whitelisted _ ->
           (* Whitelists are IP-based, so just move on. *)
           debug "connect address is whitelisted";
@@ -145,14 +169,17 @@ let envrcpt ctx rcpt args =
   debug "envrcpt callback: rcpt=%s" rcpt;
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
+      let rcpt = canonicalize rcpt in
+      let is_remote = Proxymap.is_remote rcpt in
+      let priv = { priv with rcpts = (rcpt, is_remote)::priv.rcpts } in
       if priv.is_bounce && Str.string_match srs_re rcpt 0 then begin
         debug "got an SRS-signed bounce";
         try
           let n = 1 + int_of_string (Str.matched_group 1 rcpt) in
           let srs = Milter_srs.current () in
-          let rev_rcpt = applyn (SRS.reverse srs) (canonicalize rcpt) n in
+          let rev_rcpt = applyn (SRS.reverse srs) rcpt n in
           info "SRS-reversed address for '%s': '%s'" rcpt rev_rcpt;
-          { priv with rcpt = Some (rcpt, rev_rcpt) }, Milter.Continue
+          { priv with rev_rcpt = Some rev_rcpt }, Milter.Continue
         with SRS.SRS_error s ->
           notice "SRS failure: %s: %s" rcpt s;
           priv, milter_reject ctx s
@@ -163,16 +190,18 @@ let eom ctx =
   debug "eom callback";
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
-      (match priv.rcpt with
-      | Some (srs_rcpt, rev_rcpt) ->
-          info "replacing bounce destination '%s' with '%s'" srs_rcpt rev_rcpt;
-          Milter.delrcpt ctx srs_rcpt;
-          Milter.addrcpt ctx rev_rcpt
-      | None ->
-          ());
+      let from, is_remote_from = O.some priv.from in
+      O.may (set_reverse_srs_rcpt ctx from) priv.rev_rcpt;
+      let rcpts = priv.rcpts in
+      let any_remote = List.exists snd in
+      if is_remote_from && any_remote rcpts then begin
+        let srs = Milter_srs.current () in
+        let fwd = choose_forward_domain rcpts in
+        let srs_from = SRS.forward srs from fwd in
+        info "SRS-signed %s to %s" from srs_from;
+        Milter.chgfrom ctx srs_from ""
+      end;
       (match priv.result with
-      | No_result ->
-          ()
       | Whitelisted ((_, msg) as header) ->
           info "Whitelisted address: %s" msg;
           milter_add_header ctx header
@@ -180,7 +209,9 @@ let eom ctx =
           info "SPF result: %s" (SPF.string_of_result (SPF.result r));
           let ar = authentication_results ctx priv r in
           milter_add_header ctx ("Authentication-Results", ar);
-          milter_add_header ctx ("Received-SPF", SPF.received_spf_value r));
+          milter_add_header ctx ("Received-SPF", SPF.received_spf_value r)
+      | No_result ->
+          ());
       priv, Milter.Continue)
 
 let abort ctx =
