@@ -20,8 +20,7 @@ override_dh_auto_install:
 	install -m0644 etc/srslyd.conf $(BUILD_DIR)/etc/srsly/srslyd.conf
 	touch $(BUILD_DIR)/etc/srsly/srs_secrets
 	install -m0755 _build/src/srsly.native $(BUILD_DIR)/usr/sbin/srsly
-	install -m0755 _build/src/srsly_in.native $(BUILD_DIR)/usr/lib/srsly/srsly_in
-	install -m0755 _build/src/srsly_out.native $(BUILD_DIR)/usr/lib/srsly/srsly_out
+	install -m0755 _build/src/srsly_milter.native $(BUILD_DIR)/usr/lib/srsly/srsly-milter
 	install -m0755 _build/src/srslyd.native $(BUILD_DIR)/usr/lib/srsly/srslyd
 
 override_dh_auto_clean:
