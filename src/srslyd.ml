@@ -57,14 +57,11 @@ let () =
   ignore_result (Lwt_log.notice "starting up");
   if Array.length Sys.argv > 1 then
     Config.file := Sys.argv.(1);
-  let slaves =
-    [ Config.milter_input_executable (), slave_ipc_handler, 1
-    ; Config.milter_output_executable (), slave_ipc_handler, 1 ] in
-  Release.master_slaves
+  let slave = (Config.milter_executable (), slave_ipc_handler) in
+  Release.master_slave
     ~background:(Config.background ())
     ~lock_file:(Config.lock_file ())
     ~control:(Config.control_socket (), control_connection_handler)
-    ~syslog:true
     ~main:main
-    ~slaves:slaves
+    ~slave:slave
     ()

@@ -17,10 +17,8 @@ val background : unit -> bool
 val random_device : unit -> Lwt_io.file_name
 
 val milter_user : unit -> string
-val milter_input_executable : unit -> string
-val milter_output_executable : unit -> string
-val milter_input_listen_address : unit -> string
-val milter_output_listen_address : unit -> string
+val milter_executable : unit -> string
+val milter_listen_address : unit -> string
 val milter_debug_level : unit -> int
 
 val proxymap_lookup_tables : unit -> string list

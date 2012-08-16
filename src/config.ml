@@ -6,11 +6,10 @@ open Util
 module O = Release_option
 
 type milter_config =
-  { user              : string
-  ; input_executable  : Lwt_io.file_name
-  ; output_executable : Lwt_io.file_name
-  ; listen_address    : string * string
-  ; debug_level       : int
+  { user           : string
+  ; executable     : Lwt_io.file_name
+  ; listen_address : string
+  ; debug_level    : int
   }
 
 type proxymap_config =
@@ -173,10 +172,8 @@ let milter_spec =
   let module D = Milter_defaults in
   `Required ("milter",
     [ `Optional ("user", D.user, [unprivileged_user])
-    ; `Required ("input_executable", secure_executable)
-    ; `Required ("output_executable", secure_executable)
-    ; `Required ("input_listen_address", [socket_string])
-    ; `Required ("output_listen_address", [socket_string])
+    ; `Required ("executable", secure_executable)
+    ; `Required ("listen_address", [socket_string])
     ; `Optional ("debug_level", D.debug_level, [int_in_range (0, 6)])
     ])
 
@@ -247,14 +244,12 @@ let make c =
   let relay_whitelist =
     whitelist_of_list (string_list_value (find_srslyd "relay_whitelist" c)) in
   let random_device = string_value (find_srslyd "random_device" c) in
-  let milter_addr_in = string_value (find_milter "input_listen_address" c) in
-  let milter_addr_out = string_value (find_milter "output_listen_address" c) in
+  let milter_addr = string_value (find_milter "listen_address" c) in
   let milter_config =
-    { user              = string_value (find_milter "user" c)
-    ; input_executable  = string_value (find_milter "input_executable" c)
-    ; output_executable = string_value (find_milter "output_executable" c)
-    ; listen_address    = (milter_addr_in, milter_addr_out)
-    ; debug_level       = int_value (find_milter "debug_level" c)
+    { user           = string_value (find_milter "user" c)
+    ; executable     = string_value (find_milter "executable" c)
+    ; listen_address = milter_addr
+    ; debug_level    = int_value (find_milter "debug_level" c)
     } in
   let proxymap_config =
     { lookup_tables = string_list_value (find_proxymap "lookup_tables" c)
@@ -345,17 +340,11 @@ let random_device () =
 let milter_user () =
   (current ()).milter.user
 
-let milter_input_executable () =
-  (current ()).milter.input_executable
+let milter_executable () =
+  (current ()).milter.executable
 
-let milter_output_executable () =
-  (current ()).milter.output_executable
-
-let milter_input_listen_address () =
-  fst (current ()).milter.listen_address
-
-let milter_output_listen_address () =
-  snd (current ()).milter.listen_address
+let milter_listen_address () =
+  (current ()).milter.listen_address
 
 let milter_debug_level () =
   (current ()).milter.debug_level

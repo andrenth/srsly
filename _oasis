@@ -21,32 +21,10 @@ Executable "srslyd"
                    lwt.unix,
                    lwt.syntax
 
-Executable "srsly-in"
+Executable "srsly-milter"
   Path:            src
   BuildTools:      ocamlbuild
-  MainIs:          srsly_in.ml
-  Install:         true
-  CompiledObject:  best
-  BuildDepends:    milter,
-                   spf,
-                   srs,
-                   str,
-                   syslog,
-                   unix,
-                   threads,
-                   uint.uint32,
-                   uint.uint128,
-                   release,
-                   release.config,
-                   lwt,
-                   lwt.unix,
-                   lwt.syntax,
-                   lwt.preemptive
-
-Executable "srsly-out"
-  Path:            src
-  BuildTools:      ocamlbuild
-  MainIs:          srsly_out.ml
+  MainIs:          srsly_milter.ml
   Install:         true
   CompiledObject:  best
   BuildDepends:    milter,
