@@ -16,17 +16,26 @@ let build_request fmt table flags key =
 
 let make_request socket req =
   let fd = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-  Unix.connect fd (Unix.ADDR_UNIX socket);
-  let rec writen off rem =
-    let n = Unix.write fd req off rem in
-    let diff = rem - n in
-    if diff > 0 then
-      writen n diff in
-  writen 0 (String.length req);
-  let buf = String.create 1024 in
-  let n = Unix.read fd buf 0 (String.length buf) in
-  Unix.close fd;
-  String.sub buf 0 n
+  debug "connecting to proxymap socket";
+  (try
+    Unix.connect fd (Unix.ADDR_UNIX socket);
+  with Unix.Unix_error (e, _, _) ->
+    failwith
+      (sprintf "Proxymap.make_request: connect: %s" (Unix.error_message e)));
+  try
+    let rec writen off rem =
+      let n = Unix.write fd req off rem in
+      let diff = rem - n in
+      if diff > 0 then
+        writen n diff in
+    writen 0 (String.length req);
+    let buf = String.create 1024 in
+    let n = Unix.read fd buf 0 (String.length buf) in
+    Unix.close fd;
+    String.sub buf 0 n
+  with e ->
+    Unix.close fd;
+    failwith (sprintf "Proxymap.make_request: %s" (Printexc.to_string e))
 
 let status_message = function
   | "0" -> "operation succeeded"
@@ -49,7 +58,7 @@ let parse_result res fmt sep =
   let sep_re = Str.regexp sep in
   let set_result k v =
     if Hashtbl.mem results k then
-      failwith (sprintf "parse_result: key {%s} already set" k)
+      failwith (sprintf "Proxymap.parse_result: key {%s} already set" k)
     else
       Hashtbl.replace results k v in
   let rec scan i j =
@@ -57,7 +66,7 @@ let parse_result res fmt sep =
       match res.[i], fmt.[j] with
       | _, '{' -> get_key i (j+1)
       | a, b when a = b -> scan (i+1) (j+1)
-      | a, b -> failwith (sprintf "parse_result: expected '%c', found '%c'" b a)
+      | a, b -> failwith (sprintf "Proxymap.parse_result: got %c, want %c" b a)
     else
       () (* done *)
   and get_key i j =
