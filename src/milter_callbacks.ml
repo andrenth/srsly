@@ -1,4 +1,5 @@
 open Printf
+open Log
 open Milter_util
 open Util
 
@@ -148,9 +149,11 @@ let envfrom ctx from args =
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       let from = canonicalize from in
+      let is_remote = Proxymap.is_remote from in
+      debug "from is %s" (if is_remote then "remote" else "local");
       let priv =
         { priv with
-          from = Some (from, Proxymap.is_remote from)
+          from = Some (from, is_remote)
         ; is_bounce = from = ""
         } in
       match priv.result with
@@ -171,6 +174,7 @@ let envrcpt ctx rcpt args =
     (fun priv ->
       let rcpt = canonicalize rcpt in
       let is_remote = Proxymap.is_remote rcpt in
+      debug "rcpt is %s" (if is_remote then "remote" else "local");
       let priv = { priv with rcpts = (rcpt, is_remote)::priv.rcpts } in
       if priv.is_bounce && Str.string_match srs_re rcpt 0 then begin
         debug "got an SRS-signed bounce";
