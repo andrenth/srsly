@@ -55,16 +55,18 @@ let canonicalize a =
 
 let handle_ipc_response = function
   | Configuration c ->
-      notice "received a new configuration; replacing";
+      lwt () = Lwt_log.notice "received a new configuration; replacing" in
       Config.replace c;
       set_log_level (Config.log_level ());
-      Milter.setdbg (Config.milter_debug_level ())
+      Milter.setdbg (Config.milter_debug_level ());
+      return ()
   | SRS_secrets ss ->
-      notice "received new SRS secrets; reloading";
-      Milter_srs.reload ss
+      lwt () = Lwt_log.notice "received new SRS secrets; reloading" in
+      Milter_srs.reload ss;
+      return ()
 
 let handle_ipc = function
-  | `Response r -> return (handle_ipc_response r)
+  | `Response r -> handle_ipc_response r
   | `EOF -> Lwt_log.error "EOF on IPC socket" >> exit 1
   | `Timeout -> Lwt_log.error "timeout on IPC socket"
 
@@ -79,7 +81,6 @@ let rec ipc_reader fd =
 
 let main filter listen_addr fd =
   lwt () = Lwt_log.notice "starting up" in
-  Log.setup ();
   lwt () = read_srs_secrets fd in
   let ipc_read_t = ipc_reader fd in
   Milter.setdbg (Config.milter_debug_level ());

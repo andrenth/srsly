@@ -31,7 +31,6 @@ Executable "srsly-milter"
                    spf,
                    srs,
                    str,
-                   syslog,
                    unix,
                    threads,
                    uint.uint32,

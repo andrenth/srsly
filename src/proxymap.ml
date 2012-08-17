@@ -1,5 +1,6 @@
 open Lwt
 open Printf
+open Log
 
 let build_request fmt table flags key =
   let i = ref 1 in
@@ -98,7 +99,7 @@ let query key =
           Some res.value
         else begin
           if res.status <> "1" then 
-            Log.warning "Proxymap.query: %s" (status_message res.status);
+            warning "Proxymap.query: %s" (status_message res.status);
           run_query ts
         end in
   run_query tables
