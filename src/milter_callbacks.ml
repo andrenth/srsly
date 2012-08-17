@@ -227,12 +227,12 @@ let close ctx =
 
 let negotiate ctx actions steps =
   debug "negotiate callback";
-  let reqactions = [Milter.ADDHDRS; Milter.DELRCPT; Milter.ADDRCPT] in
+  let reqactions =
+    [Milter.ADDHDRS; Milter.ADDRCPT; Milter.DELRCPT; Milter.CHGFROM] in
   if FlagSet.subset (FlagSet.of_list reqactions) (FlagSet.of_list actions) then
     let unreq_steps =
       StepSet.of_list
-        [ Milter.NORCPT
-        ; Milter.NOHDRS
+        [ Milter.NOHDRS
         ; Milter.NOEOH
         ; Milter.NOBODY
         ; Milter.NOUNKNOWN
