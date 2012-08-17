@@ -82,9 +82,11 @@ let rec ipc_reader fd =
 let main filter listen_addr fd =
   lwt () = Lwt_log.notice "starting up" in
   lwt () = read_srs_secrets fd in
-  let ipc_read_t = ipc_reader fd in
-  Milter.setdbg (Config.milter_debug_level ());
-  Milter.setconn listen_addr;
-  Milter.register filter;
-  Milter.main ();
-  Lwt.join [ipc_read_t]
+  let ipc_t = ipc_reader fd in
+  let milter () =
+    Milter.setdbg (Config.milter_debug_level ());
+    Milter.setconn listen_addr;
+    Milter.register filter;
+    Milter.main () in
+  let milter_t = Lwt_preemptive.detach milter () in
+  milter_t <&> ipc_t
