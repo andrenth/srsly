@@ -25,7 +25,7 @@ val proxymap_lookup_tables : unit -> string list
 val proxymap_query_format : unit -> string
 val proxymap_result_format : unit -> string
 val proxymap_result_value_separator : unit -> string
-val proxymap_local_user_matches : unit -> string
+val proxymap_local_user_regexp : unit -> Str.regexp
 val proxymap_query_flags : unit -> int
 val proxymap_query_socket : unit -> Lwt_io.file_name
  
