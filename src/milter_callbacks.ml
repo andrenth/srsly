@@ -217,7 +217,7 @@ let eom ctx =
         let fwd = choose_forward_domain rcpts in
         let srs_from = SRS.forward srs from fwd in
         info "SRS-signed %s to %s" from srs_from;
-        Milter.chgfrom ctx srs_from ""
+        Milter.chgfrom ctx srs_from None
       end;
       (match priv.result with
       | Whitelisted ((_, msg) as header) ->
