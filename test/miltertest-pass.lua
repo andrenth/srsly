@@ -2,14 +2,14 @@
 mt.echo("*** begin test")
 -- start the filter
 binpath = mt.getcwd() .. "/_build/src"
-daemon = "spfd.native"
+daemon = "srslyd.native"
 filter = binpath .. "/" .. daemon
 
 mt.echo("*** executing " .. filter)
-mt.startfilter(filter)
+mt.startfilter(filter, "test/srslyd.conf")
 mt.sleep(2)
 
-conn = "inet:9999@127.0.0.1"
+conn = "inet:8387@127.0.0.1"
 envfrom = "andre@digirati.com.br"
 helofqdn = "mta112.f1.k8.com.br"
 heloaddr = "187.73.32.184"
@@ -40,8 +40,12 @@ if mt.getreply(conn) ~= SMFIR_CONTINUE then
   error "mt.eom() unexpected reply"
 end
 
-if not mt.eom_check(conn, MT_HDRADD, "Received-SPF") then
-  error "no header added"
+if not mt.eom_check(conn, MT_HDRINSERT, "Authentication-Results") then
+  error "no Authentication-Results header added"
+end
+
+if not mt.eom_check(conn, MT_HDRINSERT, "Received-SPF") then
+  error "no Received-SPF header added"
 end
 
 mt.disconnect(conn)
