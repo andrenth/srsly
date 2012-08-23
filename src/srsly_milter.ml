@@ -3,10 +3,17 @@ open Printf
 open Util
 open Milter_util
 
+let flags =
+  [ Milter.ADDHDRS
+  ; Milter.DELRCPT
+  ; Milter.ADDRCPT
+  ; Milter.CHGFROM
+  ]
+
 let filter =
   { Milter.name      = "srsly-milter"
   ; Milter.version   = Milter.version_code
-  ; Milter.flags     = [Milter.ADDHDRS; Milter.DELRCPT; Milter.ADDRCPT]
+  ; Milter.flags     = flags
   ; Milter.connect   = Some Milter_callbacks.connect
   ; Milter.helo      = Some Milter_callbacks.helo
   ; Milter.envfrom   = Some Milter_callbacks.envfrom
