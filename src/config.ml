@@ -310,8 +310,8 @@ let replace c =
 let serialize c =
   Marshal.to_string c []
 
-let unserialize s i =
-  Marshal.from_string s i
+let unserialize s =
+  Marshal.from_string s 0
 
 let lock_file () =
   (current ()).lock_file

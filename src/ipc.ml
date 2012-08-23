@@ -12,6 +12,9 @@ module Slave_types = struct
     | SRS_secrets of (string * string list)
 end
 
+let payload s =
+  String.sub s 2 (String.length s - 2)
+
 module Slave_ops = struct
   include Slave_types
 
@@ -23,7 +26,7 @@ module Slave_ops = struct
   let request_of_string s =
     match s.[0] with
     | 'c' -> Configuration_request
-    | 'p' -> Proxymap_query (String.sub s 2 (String.length s - 2))
+    | 'p' -> Proxymap_query (payload s)
     | 's' -> SRS_secrets_request
     | other -> failwith (sprintf "unexpected request: '%c'" other)
 
@@ -34,9 +37,9 @@ module Slave_ops = struct
 
   let response_of_string s =
     match s.[0] with
-    | 'C' -> Configuration (Config.unserialize s 2)
-    | 'P' -> Proxymap_response (if s.[2] = 't' then true else false)
-    | 'S' -> SRS_secrets (Milter_srs.unserialize_secrets s 2)
+    | 'C' -> Configuration (Config.unserialize (payload s))
+    | 'P' -> Proxymap_response (payload s = "t")
+    | 'S' -> SRS_secrets (Milter_srs.unserialize_secrets (payload s))
     | other -> failwith (sprintf "unexpected response: '%c'" other)
 end
 

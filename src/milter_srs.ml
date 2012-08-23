@@ -5,8 +5,8 @@ let srs = ref None
 let serialize_secrets ss =
   Marshal.to_string ss []
 
-let unserialize_secrets s i =
-  Marshal.from_string s i
+let unserialize_secrets s =
+  Marshal.from_string s 0
 
 let make_srs secrets =
   SRS.make

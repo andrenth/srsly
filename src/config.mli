@@ -6,7 +6,7 @@ val current : unit -> t
 val reload : unit -> unit
 val replace : t -> unit
 val serialize : t -> string
-val unserialize : string -> int -> t
+val unserialize : string -> t
 val lock_file : unit -> Lwt_io.file_name
 val control_socket : unit -> string
 val log_level : unit -> Lwt_log.level
