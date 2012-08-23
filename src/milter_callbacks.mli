@@ -1,5 +1,3 @@
-open Milter_util
-
 val init : (string -> bool Lwt.t) -> unit
 val connect : Milter.ctx -> string option -> Unix.sockaddr option -> Milter.stat
 val helo : Milter.ctx -> string option -> Milter.stat
@@ -10,6 +8,6 @@ val abort : Milter.ctx -> Milter.stat
 val close : Milter.ctx -> Milter.stat
 
 val negotiate : Milter.ctx
-             -> FlagSet.elt list
-             -> StepSet.elt list
-             -> Milter.stat * Milter.flag list * StepSet.elt list
+             -> Milter.flag list
+             -> Milter.step list
+             -> Milter.stat * Milter.flag list * Milter.step list
