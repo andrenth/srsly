@@ -134,21 +134,26 @@ end
 
 module Milter_defaults = struct
   let user = default_string "srslyd"
+  let listen_address = default_string "inet:8387@localhost"
+  let executable = default_string "/usr/lib/srsly/srsly-milter"
   let debug_level = default_int 0
 end
 
 module Proxymap_defaults = struct
+  let lookup_tables = default_string_list ["hash:/etc/aliases"]
   let query_format = default_string
     "request\000lookup\000table\000{t}\000flags\000{f}\000key\000{k}\000\000"
   let result_format = default_string
     "status\000{s}\000value\000{v}\000\000"
   let result_value_separator = default_string ","
+  let local_user_regexp = default_regexp (Str.regexp "^[a-z]+$")
   let query_flags = default_int
     16448 (* DICT_FLAG_FOLD_FIX | DICT_FLAG_LOCK *)
   let query_socket = default_string "/var/spool/postfix/private/proxymap"
 end
 
 module SRS_defaults = struct
+  let secret_file = default_string "/etc/srsly/srs_secrets"
   let hash_max_age = default_int 8
   let hash_length = default_int 8
   let separator = default_string "="
@@ -157,7 +162,7 @@ end
 
 let srslyd_spec =
   let module D = Srslyd_defaults in
-  `Required ("srslyd",
+  `Optional ("srslyd",
     [ `Optional ("lock_file", D.lock_file, [existing_dirname])
     ; `Optional ("control_socket", D.control_socket, [existing_dirname])
     ; `Optional ("log_level", D.log_level, [string_in log_levels])
@@ -170,30 +175,30 @@ let srslyd_spec =
 
 let milter_spec =
   let module D = Milter_defaults in
-  `Required ("milter",
+  `Optional ("milter",
     [ `Optional ("user", D.user, [unprivileged_user])
-    ; `Required ("executable", secure_executable)
-    ; `Required ("listen_address", [socket_string])
+    ; `Optional ("executable", D.executable, secure_executable)
+    ; `Optional ("listen_address", D.listen_address, [socket_string])
     ; `Optional ("debug_level", D.debug_level, [int_in_range (0, 6)])
     ])
 
 let proxymap_spec =
   let module D = Proxymap_defaults in
-  `Required ("proxymap",
-    [ `Required ("lookup_tables", [postfix_tables])
+  `Optional ("proxymap",
+    [ `Optional ("lookup_tables", D.lookup_tables, [postfix_tables])
     ; `Optional ("query_format", D.query_format, [string])
     ; `Optional ("result_format", D.result_format, [string])
     ; `Optional ("result_value_separator", D.result_value_separator, [string])
-    ; `Required ("local_user_regexp", [regexp])
+    ; `Optional ("local_user_regexp", D.local_user_regexp, [regexp])
     ; `Optional ("query_flags", D.query_flags, [int])
     ; `Optional ("query_socket", D.query_socket, [unix_socket])
     ])
 
 let srs_spec =
   let module D = SRS_defaults in
-  `Required ("srs",
+  `Optional ("srs",
     [ `Optional ("domain", None, [string])
-    ; `Required ("secret_file", secure_secret_file)
+    ; `Optional ("secret_file", D.secret_file, secure_secret_file)
     ; `Optional ("hash_max_age", D.hash_max_age, [int])
     ; `Optional ("hash_length", D.hash_length, [int])
     ; `Optional ("separator", D.separator, [string_in ["+"; "-"; "="]])
