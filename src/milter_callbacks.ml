@@ -91,6 +91,7 @@ let spf_check ctx priv from =
   | other -> spf_res, milter_res
 
 let milter_add_header ctx (field, value) =
+  debug "inserting header: %s: %s" field value;
   Milter.insheader ctx 1 field value
 
 let set_reverse_srs_rcpt ctx rcpt rev_rcpt =
@@ -162,7 +163,6 @@ let envfrom ctx from args =
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       let from = canonicalize from in
-      debug "trying proxymap query...";
       let is_remote = is_remote_addr from in
       debug "from is %s" (if is_remote then "remote" else "local");
       let priv =
@@ -173,7 +173,7 @@ let envfrom ctx from args =
       match priv.result with
       | No_result | Spf_response _ ->
           (* This callback may be called multiple times in the same
-           * connection, so ignore message-specific results. *)
+           * connection, so ignore previous results if any. *)
           debug "doing SPF verification";
           let spf_res, milter_res = spf_check ctx priv from in
           { priv with result = Spf_response spf_res }, milter_res
@@ -187,7 +187,6 @@ let envrcpt ctx rcpt args =
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       let rcpt = canonicalize rcpt in
-      debug "trying proxymap query...";
       let is_remote = is_remote_addr rcpt in
       debug "rcpt is %s" (if is_remote then "remote" else "local");
       let priv = { priv with rcpts = (rcpt, is_remote)::priv.rcpts } in
