@@ -1,5 +1,6 @@
 open Printf
 open Log
+open Lwt
 open Milter_util
 open Util
 
@@ -19,6 +20,18 @@ type priv =
   ; is_bounce : bool
   ; result    : result
   }
+
+type ops =
+  { mutable is_remote_addr : (string -> bool Lwt.t) }
+
+let ops =
+  { is_remote_addr = (fun _ -> return false) }
+
+let init is_remote =
+  ops.is_remote_addr <- is_remote
+
+let is_remote_addr addr =
+  Lwt_preemptive.run_in_main (fun () -> ops.is_remote_addr addr)
 
 let spf = SPF.server SPF.Dns_cache
 
@@ -89,7 +102,7 @@ let whitelist h =
   Whitelisted h
 
 let authentication_results ctx priv spf_res =
-  let myhostname = O.some (Milter.getsymval ctx "j") in
+  let myhostname = O.default "localhost" (Milter.getsymval ctx "j") in
   let res = SPF.string_of_result (SPF.result spf_res) in
   let comm = SPF.header_comment spf_res in
   let from = fst (O.some priv.from) in
@@ -149,7 +162,8 @@ let envfrom ctx from args =
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       let from = canonicalize from in
-      let is_remote = Proxymap.is_remote from in
+      debug "trying proxymap query...";
+      let is_remote = is_remote_addr from in
       debug "from is %s" (if is_remote then "remote" else "local");
       let priv =
         { priv with
@@ -173,7 +187,8 @@ let envrcpt ctx rcpt args =
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       let rcpt = canonicalize rcpt in
-      let is_remote = Proxymap.is_remote rcpt in
+      debug "trying proxymap query...";
+      let is_remote = is_remote_addr rcpt in
       debug "rcpt is %s" (if is_remote then "remote" else "local");
       let priv = { priv with rcpts = (rcpt, is_remote)::priv.rcpts } in
       if priv.is_bounce && Str.string_match srs_re rcpt 0 then begin

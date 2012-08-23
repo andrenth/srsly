@@ -4,8 +4,6 @@ open Ipc.Slave_types
 open Log
 open Util
 
-module O = Release_option
-
 module SetOfList = struct
   module type S = sig
     include Set.S
@@ -53,40 +51,55 @@ let canonicalize a =
   with Not_found ->
     a
 
-let handle_ipc_response = function
-  | Configuration c ->
-      lwt () = Lwt_log.notice "received a new configuration; replacing" in
-      Config.replace c;
-      set_log_level (Config.log_level ());
-      Milter.setdbg (Config.milter_debug_level ());
-      return ()
-  | SRS_secrets ss ->
-      lwt () = Lwt_log.notice "received new SRS secrets; reloading" in
-      Milter_srs.reload ss;
-      return ()
-
-let handle_ipc = function
-  | `Response r -> handle_ipc_response r
+let ipc_error = function
   | `EOF -> Lwt_log.error "EOF on IPC socket" >> exit 1
-  | `Timeout -> Lwt_log.error "timeout on IPC socket"
+  | `Timeout -> Lwt_log.error "timeout on IPC socket" >> exit 1
+
+let read_configuration fd =
+  let handle_ipc = function
+    | `Response (Configuration c) ->
+        lwt () = Lwt_log.notice "received a new configuration; replacing" in
+        Config.replace c;
+        set_log_level (Config.log_level ());
+        Milter.setdbg (Config.milter_debug_level ());
+        return ()
+    | `EOF | `Timeout as e ->
+        ipc_error e
+    | _ ->
+        fail_lwt "unexpected response while waiting for configuration" in
+  Ipc.Slave.make_request fd Configuration_request handle_ipc
 
 let read_srs_secrets fd =
+  let handle_ipc = function
+    | `Response (SRS_secrets ss) ->
+        lwt () = Lwt_log.notice "received new SRS secrets; reloading" in
+        Milter_srs.reload ss;
+        return ()
+    | `EOF | `Timeout as e ->
+        ipc_error e
+    | _ ->
+        fail_lwt "unexpected response while waiting for SRS secrets" in
   Ipc.Slave.make_request fd SRS_secrets_request handle_ipc
 
-let rec ipc_reader fd =
-  lwt r = Ipc.Slave.read_response fd in
-  lwt () = Lwt_log.debug "received IPC response from master" in
-  lwt () = handle_ipc r in
-  ipc_reader fd
+let proxymap_is_remote_addr fd =
+  let handle_ipc = function
+    | `Response (Proxymap_response r) ->
+        lwt () = Lwt_log.debug_f "received proxymap response: %b" r in
+        return r
+    | `EOF | `Timeout as e ->
+        ipc_error e
+    | _ ->
+        fail_lwt "unexpected response while waiting for proxymap response" in
+  (fun addr -> Ipc.Slave.make_request fd (Proxymap_query addr) handle_ipc)
 
-let main filter listen_addr fd =
-  lwt () = Lwt_log.notice "starting up" in
-  lwt () = read_srs_secrets fd in
-  let ipc_t = ipc_reader fd in
-  let milter () =
-    Milter.setdbg (Config.milter_debug_level ());
-    Milter.setconn listen_addr;
-    Milter.register filter;
-    Milter.main () in
-  let milter_t = Lwt_preemptive.detach milter () in
-  milter_t <&> ipc_t
+let handle_sighup fd _ =
+  Lwt.async
+    (fun () ->
+      lwt () = Lwt_log.info "got SIGHUP, asking for configuration" in
+      read_configuration fd)
+
+let handle_sigusr1 fd _ =
+  Lwt.async
+    (fun () ->
+      lwt () = Lwt_log.info "got SIGUSR1, asking for SRS secrets" in
+      read_srs_secrets fd)

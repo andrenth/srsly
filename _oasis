@@ -11,15 +11,17 @@ Executable "srslyd"
   MainIs:          srslyd.ml
   Install:         true
   CompiledObject:  best
-  BuildDepends:    srs,
-                   str,
-                   uint.uint32,
-                   uint.uint128,
+  BuildDepends:    lwt (>= 2.4.0),
+                   lwt.preemptive (>= 2.4.0),
+                   lwt.unix (>= 2.4.0),
+                   lwt.syntax (>= 2.4.0),
                    release,
                    release.config,
-                   lwt,
-                   lwt.unix,
-                   lwt.syntax
+                   srs,
+                   str,
+                   threads,
+                   uint.uint32,
+                   uint.uint128
 
 Executable "srsly-milter"
   Path:            src
@@ -27,20 +29,20 @@ Executable "srsly-milter"
   MainIs:          srsly_milter.ml
   Install:         true
   CompiledObject:  best
-  BuildDepends:    milter,
+  BuildDepends:    lwt (>= 2.4.0),
+                   lwt.preemptive (>= 2.4.0),
+                   lwt.unix (>= 2.4.0),
+                   lwt.syntax (>= 2.4.0),
+                   milter,
+                   release,
+                   release.config,
                    spf,
                    srs,
                    str,
-                   unix,
                    threads,
                    uint.uint32,
                    uint.uint128,
-                   release,
-                   release.config,
-                   lwt,
-                   lwt.unix,
-                   lwt.syntax,
-                   lwt.preemptive
+                   unix
 
 Executable "srsly"
   Path:            src
@@ -48,16 +50,16 @@ Executable "srsly"
   MainIs:          srsly.ml
   Install:         true
   CompiledObject:  best
-  BuildDepends:    milter,
+  BuildDepends:    lwt (>= 2.4.0),
+                   lwt.unix (>= 2.4.0),
+                   lwt.syntax (>= 2.4.0),
+                   milter,
+                   release,
+                   release.config,
                    spf,
                    srs,
                    str,
-                   unix,
                    threads,
                    uint.uint32,
                    uint.uint128,
-                   release,
-                   release.config,
-                   lwt,
-                   lwt.unix,
-                   lwt.syntax
+                   unix

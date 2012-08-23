@@ -6,7 +6,7 @@ let serialize_secrets ss =
   Marshal.to_string ss []
 
 let unserialize_secrets s i =
-  (Marshal.from_string s i : string * (string list))
+  Marshal.from_string s i
 
 let make_srs secrets =
   SRS.make

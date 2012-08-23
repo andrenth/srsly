@@ -23,3 +23,5 @@ let warn fmt =
 
 let err fmt =
   ksprintf (fun s -> prerr_endline s; exit 1) fmt
+
+let fail_lwt s = raise_lwt (Failure s)

@@ -1,6 +1,5 @@
 open Lwt
 open Printf
-open Log
 
 let build_request fmt table flags key =
   let i = ref 1 in
@@ -15,27 +14,26 @@ let build_request fmt table flags key =
   s
 
 let make_request socket req =
-  let fd = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-  debug "connecting to proxymap socket";
-  (try
-    Unix.connect fd (Unix.ADDR_UNIX socket);
-  with Unix.Unix_error (e, _, _) ->
-    failwith
-      (sprintf "Proxymap.make_request: connect: %s" (Unix.error_message e)));
-  try
-    let rec writen off rem =
-      let n = Unix.write fd req off rem in
-      let diff = rem - n in
-      if diff > 0 then
-        writen n diff in
-    writen 0 (String.length req);
-    let buf = String.create 1024 in
-    let n = Unix.read fd buf 0 (String.length buf) in
-    Unix.close fd;
-    String.sub buf 0 n
-  with e ->
-    Unix.close fd;
-    failwith (sprintf "Proxymap.make_request: %s" (Printexc.to_string e))
+  let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+  lwt () = Lwt_log.debug "connecting to proxymap socket" in
+  try_lwt
+    lwt () = Lwt_unix.connect fd (Unix.ADDR_UNIX socket) in
+    lwt () = Release_io.write fd (Release_buffer.of_string req) in
+    let buf = Release_buffer.create 1024 in
+    lwt n = Release_io.read_once fd buf 0 (Release_buffer.size buf) in
+    lwt () = Lwt_unix.close fd in
+    lwt () = Lwt_log.debug_f "<%s>" (Release_buffer.to_string
+    (Release_buffer.sub buf 0 n)) in
+    return (Release_buffer.to_string (Release_buffer.sub buf 0 n))
+  with
+  | Unix.Unix_error (e, _, _) ->
+      lwt () = Lwt_unix.close fd in
+      let err = Unix.error_message e in
+      raise_lwt (Failure (sprintf "Proxymap.make_request: connect: %s" err))
+  | e ->
+      lwt () = Lwt_unix.close fd in
+      let bt = Printexc.to_string e in
+      raise_lwt (Failure (sprintf "Proxymap.make_request: %s" bt))
 
 let status_message = function
   | "0" -> "operation succeeded"
@@ -97,18 +95,22 @@ let query key =
   let socket = Config.proxymap_query_socket () in
   let rec run_query = function
     | [] ->
-        None
+        return None
     | t::ts ->
         let req = build_request query_fmt t flags key in
-        let raw_res = make_request socket req in
+        lwt raw_res = make_request socket req in
         let res_fmt = Config.proxymap_result_format () in
         let sep = Config.proxymap_result_value_separator () in
         let res = parse_result raw_res res_fmt sep in
         if res.status = "0" then
-          Some res.value
+          return (Some res.value)
         else begin
-          if res.status <> "1" then 
-            warning "Proxymap.query: %s" (status_message res.status);
+          lwt () =
+            if res.status <> "1" then 
+              let err = status_message res.status in
+              Lwt_log.warning_f "Proxymap.query: %s" err
+            else
+              return () in
           run_query ts
         end in
   run_query tables
@@ -122,26 +124,13 @@ let (=~) s re =
 
 let at_re = Str.regexp "@"
 
-let local_user_regexp user =
-  let pat = Config.proxymap_local_user_matches () in
-  let replace_user u s =
-    Str.global_replace (Str.regexp "\\{u\\}") u s in
-  let replace_domain d s =
-    Str.global_replace (Str.regexp "\\{d\\}") d s in
-  let pat =
-    match Str.split at_re user with
-    | [u] -> replace_user u pat
-    | [u; d] -> replace_user u (replace_domain d pat)
-    | _ -> invalid_arg ("Proxymap.is_local: unexpected argument: " ^ user) in
-  Str.regexp pat
-
 let is_remote user =
-  let re = local_user_regexp user in
+  let re = Config.proxymap_local_user_regexp () in
   let rec remote u =
     if u =~ re then
-      false
+      return false
     else
-      match query u with
-      | None -> true
-      | Some aliases -> List.exists remote aliases in
+      match_lwt query u with
+      | None -> return true
+      | Some aliases -> Lwt_list.exists_p remote aliases in
   remote user
