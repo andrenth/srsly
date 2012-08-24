@@ -95,6 +95,6 @@ let main fd =
 
 let () =
   if Array.length Sys.argv > 1 then
-    Config.file := Sys.argv.(1);
+    Config.file := Some Sys.argv.(1);
   set_log_level (Config.log_level ());
   Release.me ~syslog:true ~user:(Config.milter_user ()) ~main:main ()

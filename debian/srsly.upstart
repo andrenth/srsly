@@ -33,7 +33,7 @@ pre-start script
 end script
 
 script
-  exec /usr/sbin/srsly start
+  exec /usr/sbin/srsly start /etc/srsly/srslyd.conf
 end script
 
 post-stop script

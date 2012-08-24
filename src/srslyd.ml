@@ -64,7 +64,7 @@ let main get_conns =
 let () =
   ignore_result (Lwt_log.notice "starting up");
   if Array.length Sys.argv > 1 then
-    Config.file := Sys.argv.(1);
+    Config.file := Some Sys.argv.(1);
   let slave = (Config.milter_executable (), slave_ipc_handler) in
   Release.master_slave
     ~background:(Config.background ())

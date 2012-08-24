@@ -44,9 +44,7 @@ type t =
   ; srs                    : srs_config
   }
 
-let default_config_file = "/etc/srsly/srslyd.conf"
-
-let file = ref default_config_file
+let file = ref None
 
 let log_levels =
   [ "debug"
@@ -284,27 +282,36 @@ let make c =
   ; srs                    = srs_config
   }
 
-let read () =
-  match Release_config.parse !file spec with
-  | `Configuration conf ->
-      make conf
-  | `Error e ->
-      fprintf stderr "%s\n%!" e;
-      exit 1
+let load () =
+  match !file with
+  | None ->
+      warn "no configuration file give, using defaults";
+      make (Release_config.defaults spec)
+  | Some file ->
+      try
+        let st = Unix.lstat file in
+        if st.Unix.st_kind = Unix.S_REG then
+          match Release_config.parse file spec with
+          | `Configuration conf -> make conf
+          | `Error e -> err "%s" e
+        else
+          err "%s: not a regular file" file
+      with Unix.Unix_error (e, _, _) ->
+        err "%s: %s" file (Unix.error_message e)
 
 let configuration = ref None
 
 let current () =
   match !configuration with
   | None ->
-      let c = read () in
+      let c = load () in
       configuration := Some c;
       c
   | Some c ->
       c
 
 let reload () =
-  configuration := Some (read ())
+  configuration := Some (load ())
 
 let replace c =
   configuration := Some c

@@ -77,7 +77,7 @@ let add_secret () =
 let usage rc =
   warn "usage: srsly <command> [/path/to/config/file]";
   warn "  available commands: start, stop, reload, restart, add-secret";
-  warn "  default configuration file: %s" Config.default_config_file;
+  warn "  if no configuration file is given, default values will be used";
   exit rc
 
 let srslyd_args cmd_argc cmd_argv =
@@ -90,8 +90,10 @@ let srslyd_args cmd_argc cmd_argv =
 
 let main argc argv =
   if argc = 1 then usage 1;
-  if argc = 3 then
-    Config.file := argv.(2);
+  if argc = 2 then
+    warn "no configuration file given; using default values"
+  else
+    Config.file := Some argv.(2);
   match argv.(1) with
   | "start" -> start (srslyd_args argc argv)
   | "stop" ->  stop ()

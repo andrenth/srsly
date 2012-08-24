@@ -1,7 +1,6 @@
 type t
 
-val file : Lwt_io.file_name ref
-val default_config_file : string
+val file : Lwt_io.file_name option ref
 val current : unit -> t
 val reload : unit -> unit
 val replace : t -> unit
