@@ -162,47 +162,47 @@ end
 
 let srslyd_spec =
   let module D = Srslyd_defaults in
-  `Optional ("srslyd",
-    [ `Optional ("lock_file", D.lock_file, [existing_dirname])
-    ; `Optional ("control_socket", D.control_socket, [existing_dirname])
-    ; `Optional ("log_level", D.log_level, [string_in log_levels])
-    ; `Optional ("fail_on_helo_temperror", D.fail_on_helo, [bool])
-    ; `Optional ("local_whitelist", D.local_whitelist, [string_list])
-    ; `Optional ("relay_whitelist", D.relay_whitelist, [string_list])
-    ; `Optional ("background", D.background, [bool])
-    ; `Optional ("random_device", D.random_device, [character_device])
+  `Section ("srslyd",
+    [ "lock_file", D.lock_file, [existing_dirname]
+    ; "control_socket", D.control_socket, [existing_dirname]
+    ; "log_level", D.log_level, [string_in log_levels]
+    ; "fail_on_helo_temperror", D.fail_on_helo, [bool]
+    ; "local_whitelist", D.local_whitelist, [string_list]
+    ; "relay_whitelist", D.relay_whitelist, [string_list]
+    ; "background", D.background, [bool]
+    ; "random_device", D.random_device, [character_device]
     ])
 
 let milter_spec =
   let module D = Milter_defaults in
-  `Optional ("milter",
-    [ `Optional ("user", D.user, [unprivileged_user])
-    ; `Optional ("executable", D.executable, secure_executable)
-    ; `Optional ("listen_address", D.listen_address, [socket_string])
-    ; `Optional ("debug_level", D.debug_level, [int_in_range (0, 6)])
+  `Section ("milter",
+    [ "user", D.user, [unprivileged_user]
+    ; "executable", D.executable, secure_executable
+    ; "listen_address", D.listen_address, [socket_string]
+    ; "debug_level", D.debug_level, [int_in_range (0, 6)]
     ])
 
 let proxymap_spec =
   let module D = Proxymap_defaults in
-  `Optional ("proxymap",
-    [ `Optional ("lookup_tables", D.lookup_tables, [postfix_tables])
-    ; `Optional ("query_format", D.query_format, [string])
-    ; `Optional ("result_format", D.result_format, [string])
-    ; `Optional ("result_value_separator", D.result_value_separator, [string])
-    ; `Optional ("local_user_regexp", D.local_user_regexp, [regexp])
-    ; `Optional ("query_flags", D.query_flags, [int])
-    ; `Optional ("query_socket", D.query_socket, [unix_socket])
+  `Section ("proxymap",
+    [ "lookup_tables", D.lookup_tables, [postfix_tables]
+    ; "query_format", D.query_format, [string]
+    ; "result_format", D.result_format, [string]
+    ; "result_value_separator", D.result_value_separator, [string]
+    ; "local_user_regexp", D.local_user_regexp, [regexp]
+    ; "query_flags", D.query_flags, [int]
+    ; "query_socket", D.query_socket, [unix_socket]
     ])
 
 let srs_spec =
   let module D = SRS_defaults in
-  `Optional ("srs",
-    [ `Optional ("domain", None, [string])
-    ; `Optional ("secret_file", D.secret_file, secure_secret_file)
-    ; `Optional ("hash_max_age", D.hash_max_age, [int])
-    ; `Optional ("hash_length", D.hash_length, [int])
-    ; `Optional ("separator", D.separator, [string_in ["+"; "-"; "="]])
-    ; `Optional ("secret_length", D.secret_length, [int_greater_than 7])
+  `Section ("srs",
+    [ "domain", None, [string]
+    ; "secret_file", D.secret_file, secure_secret_file
+    ; "hash_max_age", D.hash_max_age, [int]
+    ; "hash_length", D.hash_length, [int]
+    ; "separator", D.separator, [string_in ["+"; "-"; "="]]
+    ; "secret_length", D.secret_length, [int_greater_than 7]
     ])
 
 let spec =
