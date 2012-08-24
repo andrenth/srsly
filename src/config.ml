@@ -1,6 +1,6 @@
 open Lwt
 open Printf
-open Release_config_types
+open Release_config_values
 open Release_config_validations
 open Util
 
@@ -104,19 +104,6 @@ let postfix_table = function
   | _ ->
       `Invalid "postfix_table: not a string"
 
-let postfix_tables = function
-  | `List ts ->
-      let rec validate = function
-        | [] ->
-            `Valid
-        | t::ts ->
-            match postfix_table t with
-            | `Valid -> validate ts
-            | `Invalid reason -> `Invalid reason in
-      validate ts
-  | _ ->
-      `Invalid "postfix_tables: not a list"
-
 module Srslyd_defaults = struct
   let lock_file = default_string "/var/run/srslyd/srslyd.pid"
   let control_socket = default_string "/var/run/srslyd.sock"
@@ -181,7 +168,7 @@ let milter_spec =
 let proxymap_spec =
   let module D = Proxymap_defaults in
   `Section ("proxymap",
-    [ "lookup_tables", D.lookup_tables, [postfix_tables]
+    [ "lookup_tables", D.lookup_tables, [list_of postfix_table]
     ; "query_format", D.query_format, [string]
     ; "result_format", D.result_format, [string]
     ; "result_value_separator", D.result_value_separator, [string]
