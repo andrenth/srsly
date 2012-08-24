@@ -94,7 +94,11 @@ let main fd =
   Lwt_preemptive.detach Milter.main ()
 
 let () =
-  if Array.length Sys.argv > 1 then
-    Config.file := Some Sys.argv.(1);
+  let config_t =
+    if Array.length Sys.argv > 1 then
+      Config.load Sys.argv.(1)
+    else
+      Config.load_defaults () in
+  Lwt_main.run config_t;
   set_log_level (Config.log_level ());
   Release.me ~syslog:true ~user:(Config.milter_user ()) ~main:main ()

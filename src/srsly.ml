@@ -3,6 +3,8 @@ open Printf
 open Ipc.Control_types
 open Util
 
+module O = Release_option
+
 let srslyd = "/usr/lib/srsly/srslyd"
 
 let control f =
@@ -22,13 +24,13 @@ let start (argc, argv) =
 let stop () =
   control (fun fd -> Ipc.Control.write_request fd Stop)
 
-let reload () =
+let reload file =
   let handler = function
     | `EOF -> err "could not reload srslyd: EOF on control socket"
     | `Timeout -> err "could not reload srslyd: timeout on control socket"
-    | `Response Reloaded -> return ()
+    | `Response Reloaded_config -> return ()
     | `Response _ -> err "unexpected response on control socket" in
-  control (fun fd -> Ipc.Control.make_request fd Reload handler)
+  control (fun fd -> Ipc.Control.make_request fd (Reload_config file) handler)
 
 let restart argcv =
   lwt () = stop () in
@@ -72,7 +74,12 @@ let add_secret () =
   let ch = open_out (Config.srs_secret_file ()) in
   List.iter (fprintf ch "%s\n") (secret::old_secrets);
   close_out ch;
-  control (fun fd -> Ipc.Control.write_request fd Reload)
+  let handler = function
+    | `EOF -> err "could not reload SRS secrets: EOF on control socket"
+    | `Timeout -> err "could not reload SRS secrets: timeout on control socket"
+    | `Response Reloaded_secrets -> return ()
+    | `Response _ -> err "unexpected response on control socket" in
+  control (fun fd -> Ipc.Control.make_request fd Reload_secrets handler)
 
 let usage rc =
   warn "usage: srsly <command> [/path/to/config/file]";
@@ -90,14 +97,17 @@ let srslyd_args cmd_argc cmd_argv =
 
 let main argc argv =
   if argc = 1 then usage 1;
-  if argc = 2 then
-    warn "no configuration file given; using default values"
-  else
-    Config.file := Some argv.(2);
+  let config_file =
+    if argc = 2 then begin
+      warn "no configuration file given; using default values";
+      None
+    end else
+      Some argv.(2) in
+  lwt () = O.either Config.load_defaults Config.load config_file in
   match argv.(1) with
   | "start" -> start (srslyd_args argc argv)
   | "stop" ->  stop ()
-  | "reload" -> reload ()
+  | "reload" -> reload config_file
   | "restart" -> restart (srslyd_args argc argv)
   | "new-secret" -> new_secret ()
   | "add-secret" -> add_secret ()

@@ -1,8 +1,9 @@
 type t
 
-val file : Lwt_io.file_name option ref
+val file : unit -> Lwt_io.file_name option
+val load : Lwt_io.file_name -> unit Lwt.t
+val load_defaults : unit -> unit Lwt.t
 val current : unit -> t
-val reload : unit -> unit
 val replace : t -> unit
 val serialize : t -> string
 val unserialize : string -> t

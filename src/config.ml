@@ -1,3 +1,4 @@
+open Lwt
 open Printf
 open Release_config_types
 open Release_config_validations
@@ -43,8 +44,6 @@ type t =
   ; proxymap               : proxymap_config
   ; srs                    : srs_config
   }
-
-let file = ref None
 
 let log_levels =
   [ "debug"
@@ -282,36 +281,36 @@ let make c =
   ; srs                    = srs_config
   }
 
-let load () =
-  match !file with
-  | None ->
-      warn "no configuration file give, using defaults";
-      make (Release_config.defaults spec)
-  | Some file ->
-      try
-        let st = Unix.lstat file in
-        if st.Unix.st_kind = Unix.S_REG then
-          match Release_config.parse file spec with
-          | `Configuration conf -> make conf
-          | `Error e -> err "%s" e
-        else
-          err "%s: not a regular file" file
-      with Unix.Unix_error (e, _, _) ->
-        err "%s: %s" file (Unix.error_message e)
-
+let config_file = ref None
 let configuration = ref None
+
+let file () =
+  !config_file
+
+let load file =
+  try_lwt
+    lwt st = Lwt_unix.lstat file in
+    if st.Lwt_unix.st_kind = Lwt_unix.S_REG then
+      match_lwt Release_config.parse file spec with
+      | `Configuration conf ->
+          config_file := Some file;
+          configuration := Some (make conf);
+          return_unit
+      | `Error e ->
+          err "%s" e
+    else
+      err "%s: not a regular file" file
+  with Unix.Unix_error (e, _, _) ->
+    err "%s: %s" file (Unix.error_message e)
+
+let load_defaults () =
+  configuration := Some (make (Release_config.defaults spec));
+  return_unit
 
 let current () =
   match !configuration with
-  | None ->
-      let c = load () in
-      configuration := Some c;
-      c
-  | Some c ->
-      c
-
-let reload () =
-  configuration := Some (load ())
+  | None -> err "no config!"
+  | Some c -> c
 
 let replace c =
   configuration := Some c

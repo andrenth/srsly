@@ -1,5 +1,7 @@
 open Printf
 
+module O = Release_option
+
 module Slave_types = struct
   type request
     = Configuration_request
@@ -47,33 +49,44 @@ module Slave = Release_ipc.Make (Slave_ops)
 
 module Control_types = struct
   type request
-    = Stop
-    | Reload
+    = Reload_config of string option
+    | Reload_secrets
+    | Stop
 
   type response
-    = Stopped
-    | Reloaded
+    = Reloaded_config
+    | Reloaded_secrets
+    | Stopped
 end
 
 module Control_ops = struct
   include Control_types
 
-  let string_of_request = function
-    | Stop -> "s"
-    | Reload -> "r"
+  let option_of_string = function
+    | "" -> None
+    | s -> Some s
 
-  let request_of_string = function
-    | "s" -> Stop
-    | "r" -> Reload
-    | other -> failwith (sprintf "unexpected request: '%s'" other) 
+  let string_of_request = function
+    | Reload_config file -> sprintf "c:%s" (O.default "" file)
+    | Reload_secrets -> "s"
+    | Stop -> "t"
+
+  let request_of_string s =
+    match s.[0] with
+    | 'c' -> Reload_config (option_of_string (payload s))
+    | 's' -> Reload_secrets
+    | 't' -> Stop
+    | other -> failwith (sprintf "unexpected request: '%c'" other) 
 
   let string_of_response = function
-    | Stopped -> "S"
-    | Reloaded -> "R"
+    | Reloaded_config -> "C"
+    | Reloaded_secrets -> "S"
+    | Stopped -> "T"
 
   let response_of_string = function
-    | "S" -> Stopped
-    | "R" -> Reloaded
+    | "C" -> Reloaded_config
+    | "S" -> Reloaded_secrets
+    | "T" -> Stopped
     | other -> failwith (sprintf "unexpected response: '%s'" other)
 end
 
