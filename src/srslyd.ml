@@ -48,7 +48,8 @@ let slave_ipc_handler fd =
         return (Proxymap_response res)
     | SRS_secrets_request ->
         lwt () = Lwt_log.info "sending SRS secrets to slave" in
-        return (SRS_secrets (Srs_util.read_srs_secrets ())) in
+        lwt secrets = Srs_util.read_srs_secrets () in
+        return (SRS_secrets secrets) in
   Ipc.Slave.handle_request fd handler
 
 let control_connection_handler fd =

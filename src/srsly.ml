@@ -37,15 +37,15 @@ let restart argcv =
   start argcv
 
 let read_old_secrets () =
-  try
-    let st = Unix.lstat (Config.srs_secret_file ()) in
-    if st.Unix.st_size > 0 then
-      let old, older = Srs_util.read_srs_secrets () in
-      old::older
+  try_lwt
+    lwt st = Lwt_unix.lstat (Config.srs_secret_file ()) in
+    if st.Lwt_unix.st_size > 0 then
+      lwt old, older = Srs_util.read_srs_secrets () in
+      return (old::older)
     else
-      []
+      return_nil
   with _ ->
-    []
+    return_nil
 
 let random_init () =
   let random_dev = Config.random_device () in
@@ -70,7 +70,7 @@ let new_secret () =
 
 let add_secret () =
   let secret = make_secret () in
-  let old_secrets = read_old_secrets () in
+  lwt old_secrets = read_old_secrets () in
   let ch = open_out (Config.srs_secret_file ()) in
   List.iter (fprintf ch "%s\n") (secret::old_secrets);
   close_out ch;
