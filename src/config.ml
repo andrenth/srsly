@@ -23,8 +23,7 @@ type proxymap_config =
   }
 
 type srs_config =
-  { domain        : string option
-  ; secret_file   : Lwt_io.file_name
+  { secret_file   : Lwt_io.file_name
   ; hash_max_age  : int
   ; hash_length   : int 
   ; separator     : char
@@ -197,8 +196,7 @@ let proxymap_spec =
 let srs_spec =
   let module D = SRS_defaults in
   `Section ("srs",
-    [ "domain", None, [string]
-    ; "secret_file", D.secret_file, secure_secret_file
+    [ "secret_file", D.secret_file, secure_secret_file
     ; "hash_max_age", D.hash_max_age, [int]
     ; "hash_length", D.hash_length, [int]
     ; "separator", D.separator, [string_in ["+"; "-"; "="]]
@@ -267,8 +265,7 @@ let make c =
     ; query_socket = string_value (find_proxymap "query_socket" c)
     } in
   let srs_config =
-    { domain        = O.map string_value (find_srs_opt "domain" c)
-    ; secret_file   = string_value (find_srs "secret_file" c)
+    { secret_file   = string_value (find_srs "secret_file" c)
     ; hash_max_age  = int_value (find_srs "hash_max_age" c)
     ; hash_length   = int_value (find_srs "hash_length" c)
     ; separator     = (string_value (find_srs "separator" c)).[0]
@@ -374,9 +371,6 @@ let proxymap_query_flags () =
 
 let proxymap_query_socket () =
   (current ()).proxymap.query_socket
-
-let srs_domain () =
-  (current ()).srs.domain
 
 let srs_secret_file () =
   (current ()).srs.secret_file
