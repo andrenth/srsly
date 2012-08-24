@@ -20,7 +20,7 @@ case "$1" in
     done
     if [ ! -s /etc/srsly/srs_secrets ]; then
       echo 'generating random SRS secret'
-      srsly new-secret > /etc/srsly/srs_secrets
+      srsly new-secret /etc/srsly/srslyd.conf > /etc/srsly/srs_secrets
     fi
   ;;
 
