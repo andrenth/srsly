@@ -62,7 +62,7 @@ let srs_re = Str.regexp "^SRS\\([01]\\)[=+-]"
 let with_priv_data z ctx f =
   match Milter.getpriv ctx with
   | None -> z
-  | Some p -> let p', r = f p in Milter.setpriv ctx p'; r
+  | Some p -> let p', r = f p in Milter.setpriv ctx (Some p'); r
 
 let canonicalize a =
   let e = String.length a - 1 in
@@ -203,7 +203,7 @@ let connect ctx host addr =
     ; is_bounce = false
     ; result    = result
     } in
-  Milter.setpriv ctx priv;
+  Milter.setpriv ctx (Some priv);
   Milter.Continue
 
 let helo ctx helo =
@@ -301,7 +301,7 @@ let abort ctx =
 
 let close ctx =
   debug "close callback";
-  O.may (fun () -> Milter.unsetpriv ctx) (Milter.getpriv ctx);
+  O.may (fun () -> Milter.setpriv ctx None) (Milter.getpriv ctx);
   Milter.Continue
 
 let negotiate ctx actions steps =
