@@ -21,11 +21,12 @@ pre-start script
   touch /var/lib/srsly/etc/hosts
   mount -o bind /etc/hosts /var/lib/srsly/etc/hosts
 
-  libpath=/lib
+  lpath=/lib
   if [ "`uname -m`" = "x86_64" ]; then
-    libpath=$libpath/x86_64-linux-gnu
+    lpath=$lpath/x86_64-linux-gnu
   fi
-  for src in `ls $libpath/libresolv*.so $libpath/libnss_dns*.so`; do
+  libs="$lpath/libresolv*.so $lpath/libnss_dns*.so $lpath/libgcc_s.so.1"
+  for src in $libs; do
     dst=/var/lib/srsly/lib/${src##*/}
     touch $dst
     mount -o bind $src $dst
