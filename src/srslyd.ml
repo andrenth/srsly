@@ -36,6 +36,9 @@ let rec handle_sigusr1 _ =
       lwt () = Lwt_log.info "got SIGUSR1, reloading SRS secrets" in
       signal_slaves sigusr1)
 
+let slave_ipc_mutex = Lwt_mutex.create ()
+let control_ipc_mutex = Lwt_mutex.create ()
+
 let slave_ipc_handler fd =
   lwt () = Lwt_log.debug "received IPC request from slave" in
   let handler = function
@@ -50,7 +53,10 @@ let slave_ipc_handler fd =
         lwt () = Lwt_log.info "sending SRS secrets to slave" in
         lwt secrets = Srs_util.read_srs_secrets () in
         return (SRS_secrets secrets) in
-  Ipc.Slave.handle_request fd handler
+  lwt () = Lwt_mutex.lock slave_ipc_mutex in
+  lwt res = Ipc.Slave.handle_request fd handler in
+  Lwt_mutex.unlock slave_ipc_mutex;
+  return res
 
 let control_connection_handler fd =
   let handler = function
@@ -72,7 +78,11 @@ let control_connection_handler fd =
         Unix.kill (Unix.getpid ()) sigterm;
         lwt () = Lwt_unix.sleep 1.0 in (* give the signal handler time to run *)
         raise_lwt (Failure "I'm already dead!") in
-  Ipc.Control.handle_request ~eof_warning:false ~timeout:5. fd handler
+  lwt () = Lwt_mutex.lock control_ipc_mutex in
+  lwt res =
+    Ipc.Control.handle_request ~eof_warning:false ~timeout:5. fd handler in
+  Lwt_mutex.unlock slave_ipc_mutex;
+  return res
 
 let main get_conns =
   slave_connections := get_conns;

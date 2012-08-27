@@ -7,6 +7,8 @@ let ipc_error = function
   | `EOF -> Lwt_log.error "EOF on IPC socket" >> exit 1
   | `Timeout -> Lwt_log.error "timeout on IPC socket" >> exit 1
 
+let ipc_mtx = Lwt_mutex.create ()
+
 let read_configuration fd =
   let handle_ipc = function
     | `Response (Configuration c) ->
@@ -19,7 +21,10 @@ let read_configuration fd =
         ipc_error e
     | _ ->
         fail_lwt "unexpected response while waiting for configuration" in
-  Ipc.Slave.make_request fd Configuration_request handle_ipc
+  lwt () = Lwt_mutex.lock ipc_mtx in
+  lwt res = Ipc.Slave.make_request fd Configuration_request handle_ipc in
+  Lwt_mutex.unlock ipc_mtx;
+  return res
 
 let read_srs_secrets fd =
   let handle_ipc = function
@@ -31,7 +36,10 @@ let read_srs_secrets fd =
         ipc_error e
     | _ ->
         fail_lwt "unexpected response while waiting for SRS secrets" in
-  Ipc.Slave.make_request fd SRS_secrets_request handle_ipc
+  lwt () = Lwt_mutex.lock ipc_mtx in
+  lwt res = Ipc.Slave.make_request fd SRS_secrets_request handle_ipc in
+  Lwt_mutex.unlock ipc_mtx;
+  return res
 
 let proxymap_is_remote_addr fd =
   let handle_ipc = function
@@ -42,7 +50,11 @@ let proxymap_is_remote_addr fd =
         ipc_error e
     | _ ->
         fail_lwt "unexpected response while waiting for proxymap response" in
-  (fun addr -> Ipc.Slave.make_request fd (Proxymap_query addr) handle_ipc)
+  (fun addr ->
+    lwt () = Lwt_mutex.lock ipc_mtx in
+    lwt res = Ipc.Slave.make_request fd (Proxymap_query addr) handle_ipc in
+    Lwt_mutex.unlock ipc_mtx;
+    return res)
 
 let handle_sighup fd _ =
   Lwt.async
