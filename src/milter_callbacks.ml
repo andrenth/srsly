@@ -91,10 +91,19 @@ let milter_tempfail ctx msg =
   Milter.setreply ctx "451" (Some "4.7.1") (Some msg);
   Milter.Tempfail
 
+let detached_in_main f x =
+  Lwt_preemptive.run_in_main (fun () -> Lwt_preemptive.detach f x)
+
+let check_helo addr helo =
+  detached_in_main (SPF.check_helo spf addr) helo
+
+let check_from addr helo from =
+  detached_in_main (SPF.check_from spf addr helo) from
+
 let spf_check_helo ctx priv =
   let addr = priv.addr in
   let helo = O.some (priv.helo) in
-  let spf_res = SPF.check_helo spf addr helo in
+  let spf_res = check_helo addr helo in
   let milter_res = match SPF.result spf_res with
   | SPF.Fail c ->
       debug "HELO SPF failure for %s" helo;
@@ -113,7 +122,7 @@ let spf_check_helo ctx priv =
 let spf_check_from ctx priv from =
   let addr = priv.addr in
   let helo = O.some (priv.helo) in
-  let spf_res = SPF.check_from spf addr helo from in
+  let spf_res = check_from addr helo from in
   let milter_res = match SPF.result spf_res with
   | SPF.Fail c ->
       debug "MAIL SPF pass for %s" from;
