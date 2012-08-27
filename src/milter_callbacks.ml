@@ -59,10 +59,6 @@ let spf = SPF.server SPF.Dns_cache
 
 let srs_re = Str.regexp "^SRS\\([01]\\)[=+-]"
 
-let unbox_spf = function
-  | `Error e -> failwith (sprintf "error: %s" e)
-  | `Response r -> r
-
 let with_priv_data z ctx f =
   match Milter.getpriv ctx with
   | None -> z
@@ -98,7 +94,7 @@ let milter_tempfail ctx msg =
 let spf_check_helo ctx priv =
   let addr = priv.addr in
   let helo = O.some (priv.helo) in
-  let spf_res = unbox_spf (SPF.check_helo spf addr helo) in
+  let spf_res = SPF.check_helo spf addr helo in
   let milter_res = match SPF.result spf_res with
   | SPF.Fail c ->
       debug "HELO SPF failure for %s" helo;
@@ -117,7 +113,7 @@ let spf_check_helo ctx priv =
 let spf_check_from ctx priv from =
   let addr = priv.addr in
   let helo = O.some (priv.helo) in
-  let spf_res = unbox_spf (SPF.check_from spf addr helo from) in
+  let spf_res = SPF.check_from spf addr helo from in
   let milter_res = match SPF.result spf_res with
   | SPF.Fail c ->
       debug "MAIL SPF pass for %s" from;
@@ -131,10 +127,18 @@ let spf_check_from ctx priv from =
   spf_res, milter_res
 
 let spf_check ctx priv from =
-  let spf_res, milter_res = spf_check_helo ctx priv in
-  match milter_res with
-  | Milter.Continue -> spf_check_from ctx priv from
-  | other -> spf_res, milter_res
+  try
+    let spf_res, milter_res = spf_check_helo ctx priv in
+    match milter_res with
+    | Milter.Continue ->
+        let spf_res, milter_res = spf_check_from ctx priv from in
+        Some spf_res, milter_res
+    | other ->
+        Some spf_res, milter_res
+  with SPF.SPF_error e ->
+    let msg = sprintf "error checking SPF: %s" e in
+    warning "%s" msg;
+    None, milter_tempfail ctx msg
 
 let milter_add_header ctx (field, value) =
   debug "inserting header: %s: %s" field value;
@@ -222,7 +226,9 @@ let envfrom ctx from args =
            * connection, so ignore previous results if any. *)
           debug "doing SPF verification";
           let spf_res, milter_res = spf_check ctx priv from in
-          { priv with result = Spf_response spf_res }, milter_res
+          let result =
+            O.may_default priv.result (fun r -> Spf_response r) spf_res in
+          { priv with result = result }, milter_res
       | Whitelisted _ ->
           (* Whitelists are IP-based, so just move on. *)
           debug "connect address is whitelisted";
