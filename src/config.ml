@@ -26,7 +26,7 @@ type proxymap_config =
 type srs_config =
   { secret_file   : Lwt_io.file_name
   ; hash_max_age  : int
-  ; hash_length   : int 
+  ; hash_length   : int
   ; separator     : char
   ; secret_length : int
   }
@@ -62,7 +62,7 @@ let socket_string = function
         try
           ignore (Unix.gethostbyname (Str.matched_group 1 s));
           `Valid
-        with _ -> 
+        with _ ->
           `Invalid "socket_string: invalid hostname or address"
       else
         `Invalid "socket_string: invalid socket string"
@@ -204,10 +204,10 @@ let find_proxymap key conf =
   Release_config.get_exn conf ~section:"proxymap" key ()
 
 let find_srs key conf =
-  Release_config.get_exn conf ~section:"srs" key () 
+  Release_config.get_exn conf ~section:"srs" key ()
 
 let find_srs_opt key conf =
-  Release_config.get conf ~section:"srs" key () 
+  Release_config.get conf ~section:"srs" key ()
 
 let log_level_of_string = function
   | "debug" -> Lwt_log.Debug
@@ -226,7 +226,7 @@ let make c =
   let background = bool_value (find_srslyd "background" c) in
   let log_level = log_level_of_string (string_value (find_srslyd "log_level" c)) in
   let fail_on_helo_temperror = bool_value (find_srslyd "fail_on_helo_temperror" c) in
-  let local_whitelist = 
+  let local_whitelist =
     whitelist_of_list (string_list_value (find_srslyd "local_whitelist" c)) in
   let relay_whitelist =
     whitelist_of_list (string_list_value (find_srslyd "relay_whitelist" c)) in

@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 %:
 	dh $@
- 
+
 BUILD_DIR=$(CURDIR)/debian/tmp
 
 override_dh_auto_configure:

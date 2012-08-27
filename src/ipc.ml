@@ -42,7 +42,7 @@ module Slave_ops = struct
     | 'C' -> Configuration (Config.unserialize (payload s))
     | 'P' -> Proxymap_response (payload s = "t")
     | 'S' -> SRS_secrets (Milter_srs.unserialize_secrets (payload s))
-    | other -> failwith (sprintf "unexpected response: '%c'" other)
+    | other -> failwith (sprintf "unexpected response = '%c'" other)
 end
 
 module Slave = Release_ipc.Make (Slave_ops)
@@ -76,7 +76,7 @@ module Control_ops = struct
     | 'c' -> Reload_config (option_of_string (payload s))
     | 's' -> Reload_secrets
     | 't' -> Stop
-    | other -> failwith (sprintf "unexpected request: '%c'" other) 
+    | other -> failwith (sprintf "unexpected request: '%c'" other)
 
   let string_of_response = function
     | Reloaded_config -> "C"

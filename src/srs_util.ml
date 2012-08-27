@@ -1,7 +1,7 @@
 open Lwt
 open Util
 
-let read_srs_secrets () = 
+let read_srs_secrets () =
   let file = Config.srs_secret_file () in
   let read_secrets ch =
     let lines = Lwt_io.read_lines ch in

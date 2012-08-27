@@ -106,7 +106,7 @@ let query key =
           return (Some res.value)
         else begin
           lwt () =
-            if res.status <> "1" then 
+            if res.status <> "1" then
               let err = status_message res.status in
               Lwt_log.warning_f "Proxymap.query: %s" err
             else
