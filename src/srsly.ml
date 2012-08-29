@@ -18,24 +18,24 @@ let control f =
       err "cannot connect to control socket: %s" (Unix.error_message e) in
   finalize (fun () -> f fd) (fun () -> Lwt_unix.close fd)
 
-let start (argc, argv) =
-  let argv = Array.init argc (fun i -> if i = 0 then srslyd else argv.(i)) in
-  Unix.execv srslyd argv
+let start config =
+  Unix.execv srslyd [| srslyd; config |]
 
 let stop () =
   control (fun fd -> Ipc.Control.write_request fd Stop)
 
 let reload file =
+  let config = Some file in
   let handler = function
     | `EOF -> err "could not reload srslyd: EOF on control socket"
     | `Timeout -> err "could not reload srslyd: timeout on control socket"
     | `Response Reloaded_config -> return ()
     | `Response _ -> err "unexpected response on control socket" in
-  control (fun fd -> Ipc.Control.make_request fd (Reload_config file) handler)
+  control (fun fd -> Ipc.Control.make_request fd (Reload_config config) handler)
 
-let restart argcv =
+let restart config =
   lwt () = stop () in
-  start argcv
+  start config
 
 let read_old_secrets () =
   try_lwt
@@ -88,28 +88,15 @@ let usage rc =
   warn "  if no configuration file is given, default values will be used";
   exit rc
 
-let srslyd_args cmd_argc cmd_argv =
-  let argc = cmd_argc - 1 in
-  let argv = [| srslyd |] in
-  if argc = 1 then
-    (argc, argv)
-  else
-    (argc, Array.append argv (Array.sub cmd_argv 2 (cmd_argc - 2)))
-
 let main argc argv =
   if argc = 1 then usage 1;
-  let config_file =
-    if argc = 2 then begin
-      warn "no configuration file given; using default values";
-      None
-    end else
-      Some argv.(2) in
-  lwt () = O.either Config.load_defaults Config.load config_file in
+  let config = if argc = 2 then "/etc/srsly/srslyd.conf" else argv.(2) in
+  lwt () = Config.load config in
   match argv.(1) with
-  | "start" -> start (srslyd_args argc argv)
+  | "start" -> start config
   | "stop" ->  stop ()
-  | "reload" -> reload config_file
-  | "restart" -> restart (srslyd_args argc argv)
+  | "reload" -> reload config
+  | "restart" -> restart config
   | "new-secret" -> new_secret ()
   | "add-secret" -> add_secret ()
   | "help" -> usage 0
