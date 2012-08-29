@@ -97,8 +97,10 @@ let () =
   Lwt_main.run config_t;
   set_log_level (Config.log_level ());
   let slave = (Config.milter_executable (), slave_ipc_handler) in
+  let background = Config.background () in
   Release.master_slave
-    ~background:(Config.background ())
+    ~syslog:background
+    ~background:background
     ~lock_file:(Config.lock_file ())
     ~control:(Config.control_socket (), control_connection_handler)
     ~main:main

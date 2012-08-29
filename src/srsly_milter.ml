@@ -128,4 +128,7 @@ let () =
       Config.load_defaults () in
   Lwt_main.run config_t;
   set_log_level (Config.log_level ());
-  Release.me ~syslog:true ~user:(Config.milter_user ()) ~main:main ()
+  Release.me
+    ~syslog:(Config.background ())
+    ~user:(Config.milter_user ())
+    ~main:main ()
