@@ -1,6 +1,8 @@
 open Lwt
 open Printf
 
+open Log.Lwt
+
 let replace_formats =
   List.fold_left (fun s (fmt, rep) -> Str.global_replace (Str.regexp fmt) rep s)
 
@@ -13,7 +15,7 @@ let build_request fmt table flags key =
 
 let make_request socket req =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-  lwt () = Lwt_log.debug "connecting to proxymap socket" in
+  lwt () = debug "connecting to proxymap socket" in
   try_lwt
     lwt () = Lwt_unix.connect fd (Unix.ADDR_UNIX socket) in
     lwt () = Release_io.write fd (Release_buffer.of_string req) in
@@ -128,14 +130,12 @@ let query key table =
           | Key_not_found ->
               return (ResultSet.add k results)
           | other ->
-              let err = string_of_status other in
-              lwt () = Lwt_log.warning_f "proxymap query error in table %s: %s"
-                table err in
+              let e = string_of_status other in
+              lwt () = warning "proxymap query error in table %s: %s" table e in
               return results
         end else begin
           lwt () =
-            Lwt_log.warning_f "proxymap query maximum depth reached in table %s"
-              table in
+            warning "proxymap query maximum depth reached in table %s" table in
           return results
         end in
   lwt res = resolve [key] table 0 ResultSet.empty in
@@ -162,7 +162,7 @@ let is_remote_sender sender =
   let re = Config.proxymap_local_sender_regexp () in
   let fmt = Config.proxymap_sender_lookup_key_format () in
   let key = proxymap_key fmt sender in
-  lwt () = Lwt_log.debug_f "is_remote_sender: querying for '%s'" key in
+  lwt () = debug "is_remote_sender: querying for '%s'" key in
   (* The sender should translate to a single address, so it would probably
    * be safe to return just the first element of the result, but who knows
    * whatever crazy postfix configurations exist out there. *)
@@ -214,8 +214,7 @@ let count_remote_final_rcpts orig_rcpts =
     Lwt_list.fold_left_s
       (fun acc rcpt ->
         let key = proxymap_key fmt rcpt in
-        lwt () =
-          Lwt_log.debug_f "count_remote_final_rcpts: querying for '%s'" key in
+        lwt () = debug "count_remote_final_rcpts: querying for '%s'" key in
         lwt addrs = query key table in
         let remote, n = filter_remote addrs in
         match n with

@@ -1,16 +1,18 @@
-open Ipc.Slave_types
 open Lwt
 open Printf
+
+open Ipc.Slave_types
+open Log.Lwt
 open Util
 
 let ipc_error = function
-  | `EOF -> Lwt_log.error "EOF on IPC socket" >> exit 1
-  | `Timeout -> Lwt_log.error "timeout on IPC socket" >> exit 1
+  | `EOF -> error "EOF on IPC socket" >> exit 1
+  | `Timeout -> error "timeout on IPC socket" >> exit 1
 
 let read_configuration fd =
   let handle_ipc = function
     | `Response (Configuration c) ->
-        lwt () = Lwt_log.notice "received a new configuration; replacing" in
+        lwt () = notice "received a new configuration; replacing" in
         Config.replace c;
         set_log_level (Config.log_level ());
         Milter.setdbg (Config.milter_debug_level ());
@@ -24,7 +26,7 @@ let read_configuration fd =
 let read_srs_secrets fd =
   let handle_ipc = function
     | `Response (SRS_secrets ss) ->
-        lwt () = Lwt_log.notice "received new SRS secrets; reloading" in
+        lwt () = notice "received new SRS secrets; reloading" in
         Milter_srs.reload ss;
         return ()
     | `EOF | `Timeout as e ->
@@ -46,7 +48,7 @@ let proxymap_is_remote_sender fd =
   let handle_ipc = function
     | `Response (Remote_sender_check b) ->
         let s = if b then "remote" else "local" in
-        lwt () = Lwt_log.debug_f "received proxymap response: sender is %s" s in
+        lwt () = debug "received proxymap response: sender is %s" s in
         return b
     | `EOF | `Timeout as e ->
         ipc_error e
@@ -59,7 +61,7 @@ let proxymap_count_remote_final_rcpts fd =
   let handle_ipc = function
     | `Response (Remote_final_rcpts_count c) ->
         lwt () =
-          Lwt_log.debug_f "received proxymap final destination counts: %s"
+          debug "received proxymap final destination counts: %s"
             (join_counts c) in
         return c
     | `EOF | `Timeout as e ->
@@ -72,13 +74,13 @@ let proxymap_count_remote_final_rcpts fd =
 let handle_sighup fd _ =
   Lwt.async
     (fun () ->
-      lwt () = Lwt_log.info "got SIGHUP, asking for configuration" in
+      lwt () = info "got SIGHUP, asking for configuration" in
       read_configuration fd)
 
 let handle_sigusr1 fd _ =
   Lwt.async
     (fun () ->
-      lwt () = Lwt_log.info "got SIGUSR1, asking for SRS secrets" in
+      lwt () = info "got SIGUSR1, asking for SRS secrets" in
       read_srs_secrets fd)
 
 let flags =
@@ -108,7 +110,7 @@ let filter =
   }
 
 let main fd =
-  lwt () = Lwt_log.notice "starting up" in
+  lwt () = notice "starting up" in
   ignore (Lwt_unix.on_signal Sys.sighup (handle_sighup fd));
   ignore (Lwt_unix.on_signal Sys.sigusr1 (handle_sigusr1 fd));
   lwt () = read_srs_secrets fd in

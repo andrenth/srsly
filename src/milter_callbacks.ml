@@ -1,6 +1,7 @@
-open Printf
-open Log
 open Lwt
+open Printf
+
+open Log.Preemptive
 open Util
 
 module O = Release_option

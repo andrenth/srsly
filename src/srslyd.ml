@@ -1,7 +1,9 @@
 open Lwt
 open Printf
+
 open Ipc.Control_types
 open Ipc.Slave_types
+open Log.Lwt
 open Util
 
 module O = Release_option
@@ -20,12 +22,10 @@ let signal_slaves signum =
     (!slave_connections ())
 
 let no_config_warning () =
-  Lwt_log.warning
-    ("I was started with no configuration file; " ^
-     "use the `srsly reload` command to give me one")
+  warning "no configuration file given; try `srsly reload` to set one"
 
 let handle_sighup _ =
-  ignore_result (Lwt_log.info "got SIGHUP, reloading configuration");
+  ignore_result (info "got SIGHUP, reloading configuration");
   Lwt.async
     (fun () ->
       lwt () = O.either no_config_warning Config.load (Config.file ()) in
@@ -34,27 +34,27 @@ let handle_sighup _ =
 let rec handle_sigusr1 _ =
   Lwt.async
     (fun () ->
-      lwt () = Lwt_log.info "got SIGUSR1, reloading SRS secrets" in
+      lwt () = info "got SIGUSR1, reloading SRS secrets" in
       signal_slaves sigusr1)
 
 let slave_ipc_handler fd =
-  lwt () = Lwt_log.debug "received IPC request from slave" in
+  lwt () = debug "received IPC request from slave" in
   let handler = function
     | Configuration_request ->
-        lwt () = Lwt_log.info "sending configuration to slave" in
+        lwt () = info "sending configuration to slave" in
         return (Configuration (Config.current ()))
     | Check_remote_sender s ->
-        lwt () = Lwt_log.debug_f "proxymap remote sender check for '%s'" s in
+        lwt () = debug "proxymap remote sender check for '%s'" s in
         lwt r = Proxymap.is_remote_sender s in
         return (Remote_sender_check r)
     | Count_remote_final_rcpts rcpts ->
         lwt () =
-          Lwt_log.debug_f "proxymap final destination count request for %s"
+          debug "proxymap final destination count request for %s"
             (join_strings ", " rcpts) in
         lwt dests = Proxymap.count_remote_final_rcpts rcpts in
         return (Remote_final_rcpts_count dests)
     | SRS_secrets_request ->
-        lwt () = Lwt_log.info "sending SRS secrets to slave" in
+        lwt () = info "sending SRS secrets to slave" in
         lwt secrets = Srs_util.read_srs_secrets () in
         return (SRS_secrets secrets) in
   Ipc.Slave.handle_request fd handler
@@ -63,18 +63,18 @@ let control_connection_handler fd =
   let handler = function
     | Reload_config file ->
         let reload file =
-          lwt () = Lwt_log.notice_f "reloading configuration at %s" file in
+          lwt () = notice "reloading configuration at %s" file in
           lwt () = Config.load file in
           signal_slaves sighup in
         let config_file = O.choose file (Config.file ()) in
         lwt () = O.either no_config_warning reload config_file in
         return Reloaded_config
     | Reload_secrets ->
-        lwt () = Lwt_log.notice "reloading SRS secrets" in
+        lwt () = notice "reloading SRS secrets" in
         lwt () = signal_slaves sigusr1 in
         return Reloaded_secrets
     | Stop ->
-        lwt () = Lwt_log.notice "received stop command" in
+        lwt () = notice "received stop command" in
         (* Suicide. Release will catch SIGTERM and kill the slaves *)
         Unix.kill (Unix.getpid ()) sigterm;
         lwt () = Lwt_unix.sleep 1.0 in (* give the signal handler time to run *)
@@ -88,7 +88,7 @@ let main get_conns =
   return ()
 
 let () =
-  ignore_result (Lwt_log.notice "starting up");
+  ignore_result (notice "starting up");
   let config_file =
     if Array.length Sys.argv > 1 then Some Sys.argv.(1)
     else None in
