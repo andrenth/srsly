@@ -95,6 +95,7 @@ let () =
   let config_t =
     O.either Config.load_defaults Config.load config_file in
   Lwt_main.run config_t;
+  set_log_level (Config.log_level ());
   let slave = (Config.milter_executable (), slave_ipc_handler) in
   Release.master_slave
     ~background:(Config.background ())
