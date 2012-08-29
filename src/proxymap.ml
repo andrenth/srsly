@@ -2,6 +2,7 @@ open Lwt
 open Printf
 
 open Log.Lwt
+open Util
 
 let replace_formats =
   List.fold_left (fun s (fmt, rep) -> Str.global_replace (Str.regexp fmt) rep s)
@@ -117,18 +118,23 @@ let query key table =
     return (parse_result raw_res res_fmt sep) in
   let add_results res fullres =
     ResultSet.fold (fun r acc -> ResultSet.add r acc) res fullres in
-  let rec resolve keys table depth results =
+  let rec resolve keys depth results =
     match keys with
     | [] ->
+        lwt () = debug "no more keys, returning" in
         return results
-    | k::ks ->
+    | key::rest ->
+        lwt () = debug "resolving redirects for %s" (join_strings ", " keys) in
         if depth < max_depth then begin
           match_lwt make_query key table with
           | Ok values ->
-              lwt res = resolve values table (depth + 1) results in
-              resolve ks table depth (add_results res results)
+              lwt () =
+                debug "redirects for %s: %s" key (join_strings ", " values) in
+              lwt res = resolve values (depth + 1) results in
+              resolve rest depth (add_results res results)
           | Key_not_found ->
-              return (ResultSet.add k results)
+              lwt () = debug "no redirects found for %s" key in
+              return (ResultSet.add key results)
           | other ->
               let e = string_of_status other in
               lwt () = warning "proxymap query error in table %s: %s" table e in
@@ -138,7 +144,7 @@ let query key table =
             warning "proxymap query maximum depth reached in table %s" table in
           return results
         end in
-  lwt res = resolve [key] table 0 ResultSet.empty in
+  lwt res = resolve [key] 0 ResultSet.empty in
   return (ResultSet.elements res)
 
 let (=~) s re =
