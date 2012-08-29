@@ -2,16 +2,9 @@ open Lwt
 open Printf
 
 let build_request fmt table flags key =
-  let i = ref 1 in
-  let escape s =
-    let c = Str.matched_group 1 s in
-    incr i;
-    sprintf "%c" (char_of_int (int_of_string c)) in
-  let s = Str.global_substitute (Str.regexp "\\\\\\([0-9]+\\)") escape fmt in
-  let s = Str.global_replace (Str.regexp "\\{t\\}") table s in
-  let s = Str.global_replace (Str.regexp "\\{f\\}") (string_of_int flags) s in
-  let s = Str.global_replace (Str.regexp "\\{k\\}") key s in
-  s
+  Str.global_replace (Str.regexp "\\{t\\}") table
+    (Str.global_replace (Str.regexp "\\{f\\}") (string_of_int flags)
+      (Str.global_replace (Str.regexp "\\{k\\}") key fmt))
 
 let make_request socket req =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
@@ -22,8 +15,6 @@ let make_request socket req =
     let buf = Release_buffer.create 1024 in
     lwt n = Release_io.read_once fd buf 0 (Release_buffer.size buf) in
     lwt () = Lwt_unix.close fd in
-    lwt () = Lwt_log.debug_f "<%s>" (Release_buffer.to_string
-    (Release_buffer.sub buf 0 n)) in
     return (Release_buffer.to_string (Release_buffer.sub buf 0 n))
   with
   | Unix.Unix_error (e, _, _) ->
@@ -35,18 +26,30 @@ let make_request socket req =
       let bt = Printexc.to_string e in
       raise_lwt (Failure (sprintf "Proxymap.make_request: %s" bt))
 
-let status_message = function
-  | "0" -> "operation succeeded"
-  | "1" -> "requested key not found"
-  | "2" -> "try lookup again later"
-  | "3" -> "invalid request parameter"
-  | "4" -> "table not approved for proxying"
-  | s -> "unknown status: " ^ s
+type status
+  = Ok of string list
+  | Key_not_found
+  | Try_again
+  | Invalid_parameter
+  | Table_not_approved
+  | Unknown of int
 
-type result =
-  { status : string
-  ; value  : string list
-  }
+let status_of_code c values =
+  match c with
+  | 0 -> Ok values
+  | 1 -> Key_not_found
+  | 2 -> Try_again
+  | 3 -> Invalid_parameter
+  | 4 -> Table_not_approved
+  | x -> Unknown c
+
+let string_of_status = function
+  | Ok _ -> "operation succeeded"
+  | Key_not_found -> "requested key not found"
+  | Try_again -> "try lookup again later"
+  | Invalid_parameter -> "invalid request parameter"
+  | Table_not_approved -> "table not approved for proxying"
+  | Unknown c -> sprintf "unknown proxymap return status: %d" c
 
 (* This parser doesn't take advantage of the null-byte separator of the
  * postfix query format because there's no guarantee it's not going to
@@ -82,38 +85,56 @@ let parse_result res fmt sep =
       set_result key value in
   scan 0 0;
   try
-    let status = Hashtbl.find results "s" in
+    let code = int_of_string (Hashtbl.find results "s") in
     let value = Hashtbl.find results "v" in
-    { status = status; value = (Str.split sep_re value) }
+    status_of_code code (Str.split sep_re value)
   with Not_found ->
     failwith (sprintf "parse_result: missing keys")
 
-let query key =
+let max_depth = 100
+
+module ResultSet = Set.Make(struct
+  type t = string
+  let compare = Pervasives.compare
+end)
+
+let query key table =
   let query_fmt = Config.proxymap_query_format () in
-  let tables = Config.proxymap_lookup_tables () in
   let flags = Config.proxymap_query_flags () in
   let socket = Config.proxymap_query_socket () in
-  let rec run_query = function
+  let res_fmt = Config.proxymap_result_format () in
+  let sep = Config.proxymap_result_value_separator () in
+  let make_query key table =
+    let req = build_request query_fmt table flags key in
+    lwt raw_res = make_request socket req in
+    return (parse_result raw_res res_fmt sep) in
+  let add_results res fullres =
+    ResultSet.fold (fun r acc -> ResultSet.add r acc) res fullres in
+  let rec resolve keys table depth results =
+    match keys with
     | [] ->
-        return None
-    | t::ts ->
-        let req = build_request query_fmt t flags key in
-        lwt raw_res = make_request socket req in
-        let res_fmt = Config.proxymap_result_format () in
-        let sep = Config.proxymap_result_value_separator () in
-        let res = parse_result raw_res res_fmt sep in
-        if res.status = "0" then
-          return (Some res.value)
-        else begin
+        return results
+    | k::ks ->
+        if depth < max_depth then begin
+          match_lwt make_query key table with
+          | Ok values ->
+              lwt res = resolve values table (depth + 1) results in
+              resolve ks table depth (add_results res results)
+          | Key_not_found ->
+              return (ResultSet.add k results)
+          | other ->
+              let err = string_of_status other in
+              lwt () = Lwt_log.warning_f "proxymap query error in table %s: %s"
+                table err in
+              return results
+        end else begin
           lwt () =
-            if res.status <> "1" then
-              let err = status_message res.status in
-              Lwt_log.warning_f "Proxymap.query: %s" err
-            else
-              return () in
-          run_query ts
+            Lwt_log.warning_f "proxymap query maximum depth reached in table %s"
+              table in
+          return results
         end in
-  run_query tables
+  lwt res = resolve [key] table 0 ResultSet.empty in
+  return (ResultSet.elements res)
 
 let (=~) s re =
   try
@@ -122,15 +143,77 @@ let (=~) s re =
   with Not_found ->
     false
 
-let at_re = Str.regexp "@"
+let proxymap_key fmt addr =
+  let at = String.index addr '@' in
+  let user = String.sub addr 0 at in
+  let domain = String.sub addr (at+1) (String.length addr - at - 1) in
+  Str.global_replace (Str.regexp "\\{u\\}") user
+    (Str.global_replace (Str.regexp "\\{d\\}") domain fmt)
 
-let is_remote user =
-  let re = Config.proxymap_local_user_regexp () in
-  let rec remote u =
-    if u =~ re then
-      return false
-    else
-      match_lwt query u with
-      | None -> return true
-      | Some aliases -> Lwt_list.exists_p remote aliases in
-  remote user
+let is_remote_sender sender =
+  let table = Config.proxymap_sender_lookup_table () in
+  let re = Config.proxymap_local_sender_regexp () in
+  let fmt = Config.proxymap_sender_lookup_key_format () in
+  let key = proxymap_key fmt sender in
+  lwt () = Lwt_log.debug_f "is_remote_sender: querying for '%s'" key in
+  (* The sender should translate to a single address, so it would probably
+   * be safe to return just the first element of the result, but who knows
+   * whatever crazy postfix configurations exist out there. *)
+  lwt res = query key table in
+  return (List.exists (fun s -> not (s =~ re)) res)
+
+module type COUNT_MAP = sig
+  include Map.S
+  val incr_by : int -> key -> int t -> int t
+end
+
+module IncrMap = struct
+  module Make (Ord : Map.OrderedType) : COUNT_MAP with type key = Ord.t =
+    struct
+      include Map.Make(Ord)
+
+      let incr_by x k m =
+        try
+          let c = find k m in
+          add k (c + x) m
+        with Not_found ->
+          add k x m
+    end
+end
+
+module RcptMap = IncrMap.Make(struct
+  type t = string
+  let compare = compare
+end)
+
+(* Like List.filter but count the number of results to avoid
+ * List.length later. *)
+let filter_remote addrs =
+  let re = Config.proxymap_local_recipient_regexp () in
+  List.fold_left
+    (fun (rem, n) addr ->
+      if addr =~ re then (rem, n)
+      else (addr::rem, n+1))
+    ([], 0) addrs
+
+(* Returns the list of pairs consisting of the original recipient which
+ * translate to remote addresses and the number of remote addresses it
+ * was translated to. This number will be used as a weight in the random
+ * selection of the SRS forward domain. *)
+let count_remote_final_rcpts orig_rcpts =
+  let table = Config.proxymap_recipient_lookup_table () in
+  let fmt = Config.proxymap_recipient_lookup_key_format () in
+  lwt counts =
+    Lwt_list.fold_left_s
+      (fun acc rcpt ->
+        let key = proxymap_key fmt rcpt in
+        lwt () =
+          Lwt_log.debug_f "count_remote_final_rcpts: querying for '%s'" key in
+        lwt addrs = query key table in
+        let remote, n = filter_remote addrs in
+        match n with
+        | 0 -> return acc
+        | _ -> return (RcptMap.incr_by n rcpt acc))
+      RcptMap.empty
+      orig_rcpts in
+  return (RcptMap.bindings counts)

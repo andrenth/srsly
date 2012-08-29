@@ -25,3 +25,7 @@ let err fmt =
   ksprintf (fun s -> prerr_endline s; exit 1) fmt
 
 let fail_lwt s = raise_lwt (Failure s)
+
+let join_strings sep = function
+  | [] -> ""
+  | x::xs -> List.fold_left (fun acc y -> acc ^ sep ^ y) x xs

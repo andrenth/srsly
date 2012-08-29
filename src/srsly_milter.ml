@@ -7,8 +7,6 @@ let ipc_error = function
   | `EOF -> Lwt_log.error "EOF on IPC socket" >> exit 1
   | `Timeout -> Lwt_log.error "timeout on IPC socket" >> exit 1
 
-let ipc_mtx = Lwt_mutex.create ()
-
 let read_configuration fd =
   let handle_ipc = function
     | `Response (Configuration c) ->
@@ -21,10 +19,7 @@ let read_configuration fd =
         ipc_error e
     | _ ->
         fail_lwt "unexpected response while waiting for configuration" in
-  lwt () = Lwt_mutex.lock ipc_mtx in
-  lwt res = Ipc.Slave.make_request fd Configuration_request handle_ipc in
-  Lwt_mutex.unlock ipc_mtx;
-  return res
+  Ipc.Slave.make_request fd Configuration_request handle_ipc
 
 let read_srs_secrets fd =
   let handle_ipc = function
@@ -36,25 +31,43 @@ let read_srs_secrets fd =
         ipc_error e
     | _ ->
         fail_lwt "unexpected response while waiting for SRS secrets" in
-  lwt () = Lwt_mutex.lock ipc_mtx in
-  lwt res = Ipc.Slave.make_request fd SRS_secrets_request handle_ipc in
-  Lwt_mutex.unlock ipc_mtx;
-  return res
+  Ipc.Slave.make_request fd SRS_secrets_request handle_ipc
 
-let proxymap_is_remote_addr fd =
+let join_counts = function
+  | [] ->
+      "none"
+  | (d, c)::rest ->
+      List.fold_left
+        (fun acc (d, c) -> sprintf "%s, %s:%d" acc d c)
+        (sprintf "%s:%d" d c)
+        rest
+
+let proxymap_is_remote_sender fd =
   let handle_ipc = function
-    | `Response (Proxymap_response r) ->
-        lwt () = Lwt_log.debug_f "received proxymap response: %b" r in
-        return r
+    | `Response (Remote_sender_check b) ->
+        let s = if b then "remote" else "local" in
+        lwt () = Lwt_log.debug_f "received proxymap response: sender is %s" s in
+        return b
     | `EOF | `Timeout as e ->
         ipc_error e
     | _ ->
-        fail_lwt "unexpected response while waiting for proxymap response" in
-  (fun addr ->
-    lwt () = Lwt_mutex.lock ipc_mtx in
-    lwt res = Ipc.Slave.make_request fd (Proxymap_query addr) handle_ipc in
-    Lwt_mutex.unlock ipc_mtx;
-    return res)
+        fail_lwt "unexpected response while waiting for remote sender check" in
+  (fun sender ->
+    Ipc.Slave.make_request fd (Check_remote_sender sender) handle_ipc)
+
+let proxymap_count_remote_final_rcpts fd =
+  let handle_ipc = function
+    | `Response (Remote_final_rcpts_count c) ->
+        lwt () =
+          Lwt_log.debug_f "received proxymap final destination counts: %s"
+            (join_counts c) in
+        return c
+    | `EOF | `Timeout as e ->
+        ipc_error e
+    | _ ->
+        fail_lwt "unexpected response while waiting for final rcpt counts" in
+  (fun rcpts ->
+    Ipc.Slave.make_request fd (Count_remote_final_rcpts rcpts) handle_ipc)
 
 let handle_sighup fd _ =
   Lwt.async
@@ -99,7 +112,12 @@ let main fd =
   ignore (Lwt_unix.on_signal Sys.sighup (handle_sighup fd));
   ignore (Lwt_unix.on_signal Sys.sigusr1 (handle_sigusr1 fd));
   lwt () = read_srs_secrets fd in
-  Milter_callbacks.init (proxymap_is_remote_addr fd);
+  let module C = Milter_callbacks in
+  let callback_ops =
+    { C.count_remote_final_rcpts = proxymap_count_remote_final_rcpts fd
+    ; C.is_remote_sender         = proxymap_is_remote_sender fd
+    } in
+  C.init callback_ops;
   Milter.setdbg (Config.milter_debug_level ());
   Milter.setconn (Config.milter_listen_address ());
   Milter.register filter;

@@ -21,13 +21,17 @@ val milter_executable : unit -> string
 val milter_listen_address : unit -> string
 val milter_debug_level : unit -> int
 
-val proxymap_lookup_tables : unit -> string list
+val proxymap_sender_lookup_table : unit -> string
+val proxymap_recipient_lookup_table : unit -> string
+val proxymap_sender_lookup_key_format : unit -> string
+val proxymap_recipient_lookup_key_format : unit -> string
+val proxymap_local_sender_regexp : unit -> Str.regexp
+val proxymap_local_recipient_regexp : unit -> Str.regexp
 val proxymap_query_format : unit -> string
-val proxymap_result_format : unit -> string
-val proxymap_result_value_separator : unit -> string
-val proxymap_local_user_regexp : unit -> Str.regexp
 val proxymap_query_flags : unit -> int
 val proxymap_query_socket : unit -> Lwt_io.file_name
+val proxymap_result_format : unit -> string
+val proxymap_result_value_separator : unit -> string
 
 val srs_secret_file : unit -> Lwt_io.file_name
 val srs_hash_max_age : unit -> int

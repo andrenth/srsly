@@ -5,12 +5,14 @@ module O = Release_option
 module Slave_types = struct
   type request
     = Configuration_request
-    | Proxymap_query of string
+    | Check_remote_sender of string
+    | Count_remote_final_rcpts of string list
     | SRS_secrets_request
 
   type response
     = Configuration of Config.t
-    | Proxymap_response of bool
+    | Remote_sender_check of bool
+    | Remote_final_rcpts_count of (string * int) list
     | SRS_secrets of (string * string list)
 end
 
@@ -21,27 +23,31 @@ module Slave_ops = struct
   include Slave_types
 
   let string_of_request = function
-    | Configuration_request -> "c"
-    | Proxymap_query q -> sprintf "p:%s" q
-    | SRS_secrets_request -> "s"
+    | Configuration_request -> "a"
+    | Check_remote_sender s -> sprintf "b:%s" s
+    | Count_remote_final_rcpts rs -> sprintf "c:%s" (Marshal.to_string rs [])
+    | SRS_secrets_request -> "d"
 
   let request_of_string s =
     match s.[0] with
-    | 'c' -> Configuration_request
-    | 'p' -> Proxymap_query (payload s)
-    | 's' -> SRS_secrets_request
+    | 'a' -> Configuration_request
+    | 'b' -> Check_remote_sender (payload s)
+    | 'c' -> Count_remote_final_rcpts (Marshal.from_string (payload s) 0)
+    | 'd' -> SRS_secrets_request
     | other -> failwith (sprintf "unexpected request: '%c'" other)
 
   let string_of_response = function
-    | Configuration c -> sprintf "C:%s" (Config.serialize c)
-    | Proxymap_response r -> sprintf "P:%c" (if r then 't' else 'f')
-    | SRS_secrets ss -> sprintf "S:%s" (Milter_srs.serialize_secrets ss)
+    | Configuration c -> sprintf "A:%s" (Config.serialize c)
+    | Remote_sender_check b -> sprintf "B:%s" (string_of_bool b)
+    | Remote_final_rcpts_count rs -> sprintf "C:%s" (Marshal.to_string rs [])
+    | SRS_secrets ss -> sprintf "D:%s" (Milter_srs.serialize_secrets ss)
 
   let response_of_string s =
     match s.[0] with
-    | 'C' -> Configuration (Config.unserialize (payload s))
-    | 'P' -> Proxymap_response (payload s = "t")
-    | 'S' -> SRS_secrets (Milter_srs.unserialize_secrets (payload s))
+    | 'A' -> Configuration (Config.unserialize (payload s))
+    | 'B' -> Remote_sender_check (bool_of_string (payload s))
+    | 'C' -> Remote_final_rcpts_count (Marshal.from_string s 2)
+    | 'D' -> SRS_secrets (Milter_srs.unserialize_secrets (payload s))
     | other -> failwith (sprintf "unexpected response = '%c'" other)
 end
 

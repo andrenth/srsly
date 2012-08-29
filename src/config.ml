@@ -14,13 +14,17 @@ type milter_config =
   }
 
 type proxymap_config =
-  { lookup_tables          : string list
-  ; query_format           : string
-  ; result_format          : string
-  ; result_value_separator : string
-  ; local_user_regexp      : Str.regexp
+  { sender_lookup_table    : string
+  ; rcpt_lookup_table      : string
+  ; sender_lookup_key_fmt  : string
+  ; rcpt_lookup_key_fmt    : string
+  ; local_sender_regexp    : Str.regexp
+  ; local_rcpt_regexp      : Str.regexp
+  ; query_fmt              : string
   ; query_flags            : int
   ; query_socket           : Lwt_io.file_name
+  ; result_fmt             : string
+  ; result_value_separator : string
   }
 
 type srs_config =
@@ -123,16 +127,20 @@ module Milter_defaults = struct
 end
 
 module Proxymap_defaults = struct
-  let lookup_tables = default_string_list ["hash:/etc/aliases"]
-  let query_format = default_string
+  let sender_lookup_table = default_string "hash:/etc/aliases"
+  let rcpt_lookup_table = default_string "hash:/etc/aliases"
+  let sender_lookup_key_fmt = default_string "{u}@{d}"
+  let rcpt_lookup_key_fmt = default_string "{u}@{d}"
+  let local_sender_regexp = default_regexp (Str.regexp "^[a-z]+$")
+  let local_rcpt_regexp = default_regexp (Str.regexp "^[a-z]+$")
+  let query_fmt = default_string
     "request\000lookup\000table\000{t}\000flags\000{f}\000key\000{k}\000\000"
-  let result_format = default_string
-    "status\000{s}\000value\000{v}\000\000"
-  let result_value_separator = default_string ","
-  let local_user_regexp = default_regexp (Str.regexp "^[a-z]+$")
   let query_flags = default_int
     16448 (* DICT_FLAG_FOLD_FIX | DICT_FLAG_LOCK *)
   let query_socket = default_string "/var/spool/postfix/private/proxymap"
+  let result_fmt = default_string
+    "status\000{s}\000value\000{v}\000\000"
+  let result_value_separator = default_string ","
 end
 
 module SRS_defaults = struct
@@ -168,13 +176,17 @@ let milter_spec =
 let proxymap_spec =
   let module D = Proxymap_defaults in
   `Section ("proxymap",
-    [ "lookup_tables", D.lookup_tables, [list_of postfix_table]
-    ; "query_format", D.query_format, [string]
-    ; "result_format", D.result_format, [string]
-    ; "result_value_separator", D.result_value_separator, [string]
-    ; "local_user_regexp", D.local_user_regexp, [regexp]
+    [ "sender_lookup_table", D.sender_lookup_table, [postfix_table]
+    ; "recipient_lookup_table", D.rcpt_lookup_table, [postfix_table]
+    ; "sender_lookup_key_format", D.sender_lookup_key_fmt, [string]
+    ; "recipient_lookup_key_format", D.rcpt_lookup_key_fmt, [string]
+    ; "local_sender_regexp", D.local_sender_regexp, [regexp]
+    ; "local_recipient_regexp", D.local_rcpt_regexp, [regexp]
+    ; "query_format", D.query_fmt, [string]
     ; "query_flags", D.query_flags, [int]
     ; "query_socket", D.query_socket, [unix_socket]
+    ; "result_format", D.result_fmt, [string]
+    ; "result_value_separator", D.result_value_separator, [string]
     ])
 
 let srs_spec =
@@ -221,39 +233,45 @@ let log_level_of_string = function
 let whitelist_of_list = List.map Network.of_string
 
 let make c =
-  let lock_file = string_value (find_srslyd "lock_file" c) in
-  let control_socket = string_value (find_srslyd "control_socket" c) in
-  let background = bool_value (find_srslyd "background" c) in
-  let log_level = log_level_of_string (string_value (find_srslyd "log_level" c)) in
-  let fail_on_helo_temperror = bool_value (find_srslyd "fail_on_helo_temperror" c) in
+  let get = find_srslyd in
+  let lock_file = string_value (get "lock_file" c) in
+  let control_socket = string_value (get "control_socket" c) in
+  let background = bool_value (get "background" c) in
+  let log_level = log_level_of_string (string_value (get "log_level" c)) in
+  let fail_on_helo_temperror = bool_value (get "fail_on_helo_temperror" c) in
   let local_whitelist =
-    whitelist_of_list (string_list_value (find_srslyd "local_whitelist" c)) in
+    whitelist_of_list (string_list_value (get "local_whitelist" c)) in
   let relay_whitelist =
-    whitelist_of_list (string_list_value (find_srslyd "relay_whitelist" c)) in
-  let random_device = string_value (find_srslyd "random_device" c) in
-  let milter_addr = string_value (find_milter "listen_address" c) in
+    whitelist_of_list (string_list_value (get "relay_whitelist" c)) in
+  let random_device = string_value (get "random_device" c) in
   let milter_config =
-    { user           = string_value (find_milter "user" c)
-    ; executable     = string_value (find_milter "executable" c)
-    ; listen_address = milter_addr
-    ; debug_level    = int_value (find_milter "debug_level" c)
+    let get = find_milter in
+    { user           = string_value (get "user" c)
+    ; executable     = string_value (get "executable" c)
+    ; listen_address = string_value (get "listen_address" c)
+    ; debug_level    = int_value (get "debug_level" c)
     } in
   let proxymap_config =
-    { lookup_tables = string_list_value (find_proxymap "lookup_tables" c)
-    ; query_format = string_value (find_proxymap "query_format" c)
-    ; result_format = string_value (find_proxymap "result_format" c)
-    ; result_value_separator =
-        string_value (find_proxymap "result_value_separator" c)
-    ; local_user_regexp = regexp_value (find_proxymap "local_user_regexp" c)
-    ; query_flags  = int_value (find_proxymap "query_flags" c)
-    ; query_socket = string_value (find_proxymap "query_socket" c)
+    let get = find_proxymap in
+    { sender_lookup_table = string_value (get "sender_lookup_table" c)
+    ; rcpt_lookup_table = string_value (get "recipient_lookup_table" c)
+    ; sender_lookup_key_fmt = string_value (get "sender_lookup_key_format" c)
+    ; rcpt_lookup_key_fmt = string_value (get "recipient_lookup_key_format" c)
+    ; local_sender_regexp = regexp_value (get "local_sender_regexp" c)
+    ; local_rcpt_regexp = regexp_value (get "local_recipient_regexp" c)
+    ; query_fmt = string_value (get "query_format" c)
+    ; query_flags  = int_value (get "query_flags" c)
+    ; query_socket = string_value (get "query_socket" c)
+    ; result_fmt = string_value (get "result_format" c)
+    ; result_value_separator = string_value (get "result_value_separator" c)
     } in
   let srs_config =
-    { secret_file   = string_value (find_srs "secret_file" c)
-    ; hash_max_age  = int_value (find_srs "hash_max_age" c)
-    ; hash_length   = int_value (find_srs "hash_length" c)
-    ; separator     = (string_value (find_srs "separator" c)).[0]
-    ; secret_length = int_value (find_srs "secret_length" c)
+    let get = find_srs in
+    { secret_file   = string_value (get "secret_file" c)
+    ; hash_max_age  = int_value (get "hash_max_age" c)
+    ; hash_length   = int_value (get "hash_length" c)
+    ; separator     = (string_value (get "separator" c)).[0]
+    ; secret_length = int_value (get "secret_length" c)
     } in
   { lock_file              = lock_file
   ; control_socket         = control_socket
@@ -344,26 +362,38 @@ let milter_listen_address () =
 let milter_debug_level () =
   (current ()).milter.debug_level
 
-let proxymap_lookup_tables () =
-  (current ()).proxymap.lookup_tables
+let proxymap_sender_lookup_table () =
+  (current ()).proxymap.sender_lookup_table
+
+let proxymap_recipient_lookup_table () =
+  (current ()).proxymap.rcpt_lookup_table
+
+let proxymap_sender_lookup_key_format () =
+  (current ()).proxymap.sender_lookup_key_fmt
+
+let proxymap_recipient_lookup_key_format () =
+  (current ()).proxymap.rcpt_lookup_key_fmt
+
+let proxymap_local_sender_regexp () =
+  (current ()).proxymap.local_sender_regexp
+
+let proxymap_local_recipient_regexp () =
+  (current ()).proxymap.local_rcpt_regexp
 
 let proxymap_query_format () =
-  (current ()).proxymap.query_format
-
-let proxymap_result_format () =
-  (current ()).proxymap.result_format
-
-let proxymap_result_value_separator () =
-  (current ()).proxymap.result_value_separator
-
-let proxymap_local_user_regexp () =
-  (current ()).proxymap.local_user_regexp
+  (current ()).proxymap.query_fmt
 
 let proxymap_query_flags () =
   (current ()).proxymap.query_flags
 
 let proxymap_query_socket () =
   (current ()).proxymap.query_socket
+
+let proxymap_result_format () =
+  (current ()).proxymap.result_fmt
+
+let proxymap_result_value_separator () =
+  (current ()).proxymap.result_value_separator
 
 let srs_secret_file () =
   (current ()).srs.secret_file

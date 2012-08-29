@@ -13,18 +13,12 @@ type result
 type priv =
   { addr      : Unix.inet_addr
   ; helo      : string option
-  ; from      : (string * bool) option
-  ; rcpts     : (string * bool) list
+  ; from      : string option
+  ; rcpts     : string list
   ; rev_rcpt  : string option
   ; is_bounce : bool
   ; result    : result
   }
-
-type ops =
-  { mutable is_remote_addr : (string -> bool Lwt.t) }
-
-let ops =
-  { is_remote_addr = (fun _ -> return false) }
 
 module SetOfList = struct
   module type S = sig
@@ -49,11 +43,25 @@ module StepSet = SetOfList.Make(struct
   let compare = compare
 end)
 
-let init is_remote =
-  ops.is_remote_addr <- is_remote
+type ops =
+  { is_remote_sender         : (string -> bool Lwt.t)
+  ; count_remote_final_rcpts : (string list -> (string * int) list Lwt.t)
+  }
 
-let is_remote_addr addr =
-  Lwt_preemptive.run_in_main (fun () -> ops.is_remote_addr addr)
+let proxymap_ops = ref None
+
+let init ops =
+  proxymap_ops := Some ops
+
+let is_remote_sender sender =
+  let run ops =
+    Lwt_preemptive.run_in_main (fun () -> ops.is_remote_sender sender) in
+  O.may_default false run !proxymap_ops
+
+let count_remote_final_rcpts rcpts =
+  let run ops =
+    Lwt_preemptive.run_in_main (fun () -> ops.count_remote_final_rcpts rcpts) in
+  O.may_default [] run !proxymap_ops
 
 let spf = SPF.server SPF.Dns_cache
 
@@ -165,14 +173,20 @@ let authentication_results ctx priv spf_res =
   let myhostname = O.default "localhost" (Milter.getsymval ctx "j") in
   let res = SPF.string_of_result (SPF.result spf_res) in
   let comm = SPF.header_comment spf_res in
-  let from = fst (O.some priv.from) in
+  let from = O.some priv.from in
   let helo = O.some priv.helo in
   sprintf "%s; spf=%s (%s) smtp.mailfrom=%s smtp.helo=%s"
     myhostname res comm from helo
 
-let add_rcpt rcpt (rcpts, n) =
-  rcpts.(!n) <- (rcpt, Proxymap.is_remote rcpt);
-  incr n
+let weighted_sample a =
+  let tot = float_of_int (Array.fold_left (fun s (_, c) -> s + c) 0 a) in
+  let r = tot *. (1.0 -. Random.float 1.0) in
+  let rec sample i s =
+    if s >= r then
+      fst a.(i-1)
+    else
+      sample (i+1) (s +. float_of_int (snd a.(i))) in
+  sample 0 0.0
 
 (*
  * We choose a random domain to be used as the SRS forward domain.
@@ -182,10 +196,17 @@ let add_rcpt rcpt (rcpts, n) =
  *)
 let choose_forward_domain rcpts =
   let arr = Array.of_list rcpts in
-  let i = Random.int (Array.length arr) in
-  let rcpt, _ = arr.(i) in
+  let rcpt = weighted_sample arr in
   let at = String.index rcpt '@' in
   String.sub rcpt (at+1) (String.length rcpt - at - 1)
+
+let srs_forward ctx from remote_rcpt_counts =
+  let srs = Milter_srs.current () in
+  let fwd = choose_forward_domain remote_rcpt_counts in
+  debug "randomly chosen SRS forward domain: %s" fwd;
+  let srs_from = SRS.forward srs from fwd in
+  info "SRS-forwarding %s to %s" from srs_from;
+  Milter.chgfrom ctx srs_from None
 
 (* Callbacks *)
 
@@ -222,13 +243,7 @@ let envfrom ctx from args =
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       let from = canonicalize from in
-      let is_remote = is_remote_addr from in
-      debug "from is %s" (if is_remote then "remote" else "local");
-      let priv =
-        { priv with
-          from = Some (from, is_remote)
-        ; is_bounce = from = ""
-        } in
+      let priv = { priv with from = Some from; is_bounce = from = "" } in
       match priv.result with
       | No_result | Spf_response _ ->
           (* This callback may be called multiple times in the same
@@ -248,9 +263,7 @@ let envrcpt ctx rcpt args =
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       let rcpt = canonicalize rcpt in
-      let is_remote = is_remote_addr rcpt in
-      debug "rcpt is %s" (if is_remote then "remote" else "local");
-      let priv = { priv with rcpts = (rcpt, is_remote)::priv.rcpts } in
+      let priv = { priv with rcpts = rcpt::priv.rcpts } in
       if priv.is_bounce && Str.string_match srs_re rcpt 0 then begin
         debug "got an SRS-signed bounce";
         try
@@ -269,29 +282,27 @@ let eom ctx =
   debug "eom callback";
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
-      let from, is_remote_from = O.some priv.from in
+      let from = O.some priv.from in
       O.may (set_reverse_srs_rcpt ctx from) priv.rev_rcpt;
       let rcpts = priv.rcpts in
-      let any_remote = List.exists snd in
-      if is_remote_from && any_remote rcpts then begin
-        let srs = Milter_srs.current () in
-        let fwd = choose_forward_domain rcpts in
-        let srs_from = SRS.forward srs from fwd in
-        info "SRS-signed %s to %s" from srs_from;
-        Milter.chgfrom ctx srs_from None
+      if is_remote_sender from then begin
+        match count_remote_final_rcpts rcpts with
+        | [] -> ()
+        | rc -> srs_forward ctx from rc
       end;
-      (match priv.result with
+      match priv.result with
       | Whitelisted ((_, msg) as header) ->
           info "Whitelisted address: %s" msg;
-          milter_add_header ctx header
+          milter_add_header ctx header;
+          priv, Milter.Continue
       | Spf_response r ->
           info "SPF result: %s" (SPF.string_of_result (SPF.result r));
           let ar = authentication_results ctx priv r in
           milter_add_header ctx ("Authentication-Results", ar);
-          milter_add_header ctx ("Received-SPF", SPF.received_spf_value r)
+          milter_add_header ctx ("Received-SPF", SPF.received_spf_value r);
+          priv, Milter.Continue
       | No_result ->
-          ());
-      priv, Milter.Continue)
+          priv, Milter.Continue)
 
 let abort ctx =
   debug "abort callback";

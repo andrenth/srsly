@@ -2,6 +2,7 @@ open Lwt
 open Printf
 open Ipc.Control_types
 open Ipc.Slave_types
+open Util
 
 module O = Release_option
 
@@ -36,27 +37,27 @@ let rec handle_sigusr1 _ =
       lwt () = Lwt_log.info "got SIGUSR1, reloading SRS secrets" in
       signal_slaves sigusr1)
 
-let slave_ipc_mutex = Lwt_mutex.create ()
-let control_ipc_mutex = Lwt_mutex.create ()
-
 let slave_ipc_handler fd =
   lwt () = Lwt_log.debug "received IPC request from slave" in
   let handler = function
     | Configuration_request ->
         lwt () = Lwt_log.info "sending configuration to slave" in
         return (Configuration (Config.current ()))
-    | Proxymap_query addr ->
-        lwt () = Lwt_log.debug_f "proxymap query request for %s" addr in
-        lwt res = Proxymap.is_remote addr in
-        return (Proxymap_response res)
+    | Check_remote_sender s ->
+        lwt () = Lwt_log.debug_f "proxymap remote sender check for '%s'" s in
+        lwt r = Proxymap.is_remote_sender s in
+        return (Remote_sender_check r)
+    | Count_remote_final_rcpts rcpts ->
+        lwt () =
+          Lwt_log.debug_f "proxymap final destination count request for %s"
+            (join_strings ", " rcpts) in
+        lwt dests = Proxymap.count_remote_final_rcpts rcpts in
+        return (Remote_final_rcpts_count dests)
     | SRS_secrets_request ->
         lwt () = Lwt_log.info "sending SRS secrets to slave" in
         lwt secrets = Srs_util.read_srs_secrets () in
         return (SRS_secrets secrets) in
-  lwt () = Lwt_mutex.lock slave_ipc_mutex in
-  lwt res = Ipc.Slave.handle_request fd handler in
-  Lwt_mutex.unlock slave_ipc_mutex;
-  return res
+  Ipc.Slave.handle_request fd handler
 
 let control_connection_handler fd =
   let handler = function
@@ -78,11 +79,7 @@ let control_connection_handler fd =
         Unix.kill (Unix.getpid ()) sigterm;
         lwt () = Lwt_unix.sleep 1.0 in (* give the signal handler time to run *)
         raise_lwt (Failure "I'm already dead!") in
-  lwt () = Lwt_mutex.lock control_ipc_mutex in
-  lwt res =
-    Ipc.Control.handle_request ~eof_warning:false ~timeout:5. fd handler in
-  Lwt_mutex.unlock slave_ipc_mutex;
-  return res
+  Ipc.Control.handle_request ~eof_warning:false ~timeout:5. fd handler
 
 let main get_conns =
   slave_connections := get_conns;
