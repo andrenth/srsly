@@ -1,10 +1,15 @@
 open Lwt
 open Printf
 
+let replace_formats =
+  List.fold_left (fun s (fmt, rep) -> Str.global_replace (Str.regexp fmt) rep s)
+
 let build_request fmt table flags key =
-  Str.global_replace (Str.regexp "\\{t\\}") table
-    (Str.global_replace (Str.regexp "\\{f\\}") (string_of_int flags)
-      (Str.global_replace (Str.regexp "\\{k\\}") key fmt))
+  replace_formats fmt
+    [ ("{t}", table)
+    ; ("{f}", string_of_int flags)
+    ; ("{k}", key)
+    ]
 
 let make_request socket req =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
@@ -147,8 +152,10 @@ let proxymap_key fmt addr =
   let at = String.index addr '@' in
   let user = String.sub addr 0 at in
   let domain = String.sub addr (at+1) (String.length addr - at - 1) in
-  Str.global_replace (Str.regexp "\\{u\\}") user
-    (Str.global_replace (Str.regexp "\\{d\\}") domain fmt)
+  replace_formats fmt
+    [ ("{u}", user)
+    ; ("{d}", domain)
+    ]
 
 let is_remote_sender sender =
   let table = Config.proxymap_sender_lookup_table () in
