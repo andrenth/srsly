@@ -112,7 +112,7 @@ let postfix_table = function
 module Srslyd_defaults = struct
   let lock_file = default_string "/var/run/srslyd.pid"
   let control_socket = default_string "/var/run/srslyd.sock"
-  let log_level = default_string "notice"
+  let log_level = default_log_level Lwt_log.Notice
   let fail_on_helo = default_bool true
   let local_whitelist = default_string_list local_addresses
   let relay_whitelist = default_string_list []
@@ -157,7 +157,7 @@ let srslyd_spec =
   `Section ("srslyd",
     [ "lock_file", D.lock_file, [existing_dirname]
     ; "control_socket", D.control_socket, [existing_dirname]
-    ; "log_level", D.log_level, [string_in log_levels]
+    ; "log_level", D.log_level, [log_level]
     ; "fail_on_helo_temperror", D.fail_on_helo, [bool]
     ; "local_whitelist", D.local_whitelist, [string_list]
     ; "relay_whitelist", D.relay_whitelist, [string_list]
@@ -222,15 +222,6 @@ let find_srs key conf =
 let find_srs_opt key conf =
   Release_config.get conf ~section:"srs" key ()
 
-let log_level_of_string = function
-  | "debug" -> Lwt_log.Debug
-  | "info" -> Lwt_log.Info
-  | "notice" -> Lwt_log.Notice
-  | "warning" -> Lwt_log.Warning
-  | "error" -> Lwt_log.Error
-  | "fatal" -> Lwt_log.Fatal
-  | _ -> invalid_arg "Config.log_level_of_string"
-
 let whitelist_of_list = List.map Network.of_string
 
 let make c =
@@ -238,7 +229,7 @@ let make c =
   let lock_file = string_value (get "lock_file" c) in
   let control_socket = string_value (get "control_socket" c) in
   let background = bool_value (get "background" c) in
-  let log_level = log_level_of_string (string_value (get "log_level" c)) in
+  let log_level = log_level_value (get "log_level" c) in
   let fail_on_helo_temperror = bool_value (get "fail_on_helo_temperror" c) in
   let local_whitelist =
     whitelist_of_list (string_list_value (get "local_whitelist" c)) in
