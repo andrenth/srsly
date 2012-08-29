@@ -91,21 +91,16 @@ let flags =
   ]
 
 let filter =
-  { Milter.name      = "srsly-milter"
-  ; Milter.version   = Milter.version_code
+  { Milter.empty with
+    Milter.name      = "srsly-milter"
   ; Milter.flags     = flags
   ; Milter.connect   = Some Milter_callbacks.connect
   ; Milter.helo      = Some Milter_callbacks.helo
   ; Milter.envfrom   = Some Milter_callbacks.envfrom
   ; Milter.envrcpt   = Some Milter_callbacks.envrcpt
-  ; Milter.header    = None
-  ; Milter.eoh       = None
-  ; Milter.body      = None
   ; Milter.eom       = Some Milter_callbacks.eom
   ; Milter.abort     = Some Milter_callbacks.abort
   ; Milter.close     = Some Milter_callbacks.close
-  ; Milter.unknown   = None
-  ; Milter.data      = None
   ; Milter.negotiate = Some Milter_callbacks.negotiate
   }
 
