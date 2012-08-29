@@ -110,7 +110,7 @@ let postfix_table = function
       `Invalid "postfix_table: not a string"
 
 module Srslyd_defaults = struct
-  let lock_file = default_string "/var/run/srslyd/srslyd.pid"
+  let lock_file = default_string "/var/run/srslyd.pid"
   let control_socket = default_string "/var/run/srslyd.sock"
   let log_level = default_string "notice"
   let fail_on_helo = default_bool true
@@ -121,7 +121,7 @@ module Srslyd_defaults = struct
 end
 
 module Milter_defaults = struct
-  let user = default_string "srslyd"
+  let user = default_string "srsly"
   let listen_address = default_string "inet:8387@localhost"
   let executable = default_string "/usr/lib/srsly/srsly-milter"
   let debug_level = default_int 0
