@@ -155,13 +155,17 @@ let (=~) s re =
     false
 
 let proxymap_key fmt addr =
-  let at = String.index addr '@' in
-  let user = String.sub addr 0 at in
-  let domain = String.sub addr (at+1) (String.length addr - at - 1) in
-  replace_formats fmt
-    [ ("{u}", user)
-    ; ("{d}", domain)
-    ]
+  try
+    let at = String.index addr '@' in
+    let user = String.sub addr 0 at in
+    let domain = String.sub addr (at+1) (String.length addr - at - 1) in
+    replace_formats fmt
+      [ ("{u}", user)
+      ; ("{d}", domain)
+      ; ("{a}", addr)
+      ]
+  with Not_found ->
+    replace_formats fmt [("{a}", addr)]
 
 let is_remote_sender sender =
   let table = Config.proxymap_sender_lookup_table () in

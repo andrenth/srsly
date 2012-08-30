@@ -130,8 +130,8 @@ end
 module Proxymap_defaults = struct
   let sender_lookup_table = default_string "hash:/etc/aliases"
   let rcpt_lookup_table = default_string "hash:/etc/aliases"
-  let sender_lookup_key_fmt = default_string "{u}@{d}"
-  let rcpt_lookup_key_fmt = default_string "{u}@{d}"
+  let sender_lookup_key_fmt = default_string "{a}"
+  let rcpt_lookup_key_fmt = default_string "{a}"
   let local_sender_regexp = default_regexp (Str.regexp "^[a-z]+$")
   let local_rcpt_regexp = default_regexp (Str.regexp "^[a-z]+$")
   let query_fmt = default_string
