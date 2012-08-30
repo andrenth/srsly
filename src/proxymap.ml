@@ -64,7 +64,6 @@ let string_of_status = function
  * change in the future. *)
 let parse_result res fmt sep =
   let results = Hashtbl.create 2 in
-  let sep_re = Str.regexp sep in
   let set_result k v =
     if Hashtbl.mem results k then
       failwith (sprintf "Proxymap.parse_result: key {%s} already set" k)
@@ -95,7 +94,7 @@ let parse_result res fmt sep =
   try
     let code = int_of_string (Hashtbl.find results "s") in
     let value = Hashtbl.find results "v" in
-    status_of_code code (Str.split sep_re value)
+    status_of_code code (Str.split sep value)
   with Not_found ->
     failwith (sprintf "parse_result: missing keys")
 

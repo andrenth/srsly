@@ -26,7 +26,7 @@ type proxymap_config =
   ; query_socket           : Lwt_io.file_name
   ; max_query_depth        : int
   ; result_fmt             : string
-  ; result_value_separator : string
+  ; result_value_separator : Str.regexp
   }
 
 type srs_config =
@@ -143,7 +143,7 @@ module Proxymap_defaults = struct
   let max_query_depth = default_int 100
   let result_fmt = default_string
     "status\000{s}\000value\000{v}\000\000"
-  let result_value_separator = default_string ", "
+  let result_value_separator = default_regexp (Str.regexp ", *")
 end
 
 module SRS_defaults = struct
@@ -190,7 +190,7 @@ let proxymap_spec =
     ; "query_socket", D.query_socket, [unix_socket]
     ; "maximum_query_depth", D.max_query_depth, [int_greater_than 0]
     ; "result_format", D.result_fmt, [string]
-    ; "result_value_separator", D.result_value_separator, [string]
+    ; "result_value_separator", D.result_value_separator, [regexp]
     ])
 
 let srs_spec =
@@ -259,7 +259,7 @@ let make c =
     ; query_socket = string_value (get "query_socket" c)
     ; max_query_depth = int_value (get "maximum_query_depth" c)
     ; result_fmt = string_value (get "result_format" c)
-    ; result_value_separator = string_value (get "result_value_separator" c)
+    ; result_value_separator = regexp_value (get "result_value_separator" c)
     } in
   let srs_config =
     let get = find_srs in

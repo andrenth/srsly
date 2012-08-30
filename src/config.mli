@@ -32,7 +32,7 @@ val proxymap_query_flags : unit -> int
 val proxymap_query_socket : unit -> Lwt_io.file_name
 val proxymap_max_query_depth : unit -> int
 val proxymap_result_format : unit -> string
-val proxymap_result_value_separator : unit -> string
+val proxymap_result_value_separator : unit -> Str.regexp
 
 val srs_secret_file : unit -> Lwt_io.file_name
 val srs_hash_max_age : unit -> int
