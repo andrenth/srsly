@@ -116,33 +116,31 @@ let query key table =
     let req = build_request query_fmt table flags key in
     lwt raw_res = make_request socket req in
     return (parse_result raw_res res_fmt sep) in
-  let add_results res fullres =
-    ResultSet.fold (fun r acc -> ResultSet.add r acc) res fullres in
   let rec resolve keys depth results =
     match keys with
     | [] ->
         lwt () = debug "no more keys, returning" in
         return results
     | key::rest ->
-        lwt () = debug "resolving redirects for %s" (join_strings ", " keys) in
+        lwt () = debug "keys: %s; depth %d" (join_strings ", " keys) depth in
         if depth < max_depth then begin
+          lwt () = debug "querying key %s" key in
           match_lwt make_query key table with
           | Ok values ->
               lwt () =
                 debug "redirects for %s: %s" key (join_strings ", " values) in
-              lwt res = resolve values (depth + 1) results in
-              resolve rest depth (add_results res results)
+              resolve values (depth + 1) results
           | Key_not_found ->
               lwt () = debug "no redirects found for %s" key in
-              return (ResultSet.add key results)
+              resolve rest depth (ResultSet.add key results)
           | other ->
               let e = string_of_status other in
-              lwt () = warning "proxymap query error in table %s: %s" table e in
-              return results
+              lwt () = error "proxymap query error in table %s: %s" table e in
+              resolve rest depth results
         end else begin
           lwt () =
-            warning "proxymap query maximum depth reached in table %s" table in
-          return results
+            error "proxymap query maximum depth reached in table %s" table in
+          resolve rest depth results
         end in
   lwt res = resolve [key] 0 ResultSet.empty in
   return (ResultSet.elements res)
