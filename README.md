@@ -51,9 +51,9 @@ requirements will likely be different.
 * `$CHROOT/dev/log`
 * `$CHROOT/etc/hosts`
 * `$CHROOT/etc/resolv.conf`
-* `$CHROOT/lib/libresolv*.so`
-* `$CHROOT/lib/libnss_dns*.so`
 * `$CHROOT/lib/libgcc_s.so.1`
+* `$CHROOT/lib/libnss_dns*.so`
+* `$CHROOT/lib/libresolv*.so`
 
 You must create the directory structure and copy the above files into their
 correct location, or use bind-mounts to mirror the system files into the
@@ -124,7 +124,7 @@ changes in the Postfix query protocol without the need of recompiling srsly.
 Please see `srslyd.conf(5)` for more details on the above configuration
 directives.
 
-### SRS edge cases
+## SRS edge cases
 
 The use of SRS results in a number of edge cases which arise in the case of
 a message with multiple recipients. Those edge cases are illustrated in a
