@@ -141,7 +141,7 @@ module Proxymap_defaults = struct
   let query_socket = default_string "/var/spool/postfix/private/proxymap"
   let result_fmt = default_string
     "status\000{s}\000value\000{v}\000\000"
-  let result_value_separator = default_string ","
+  let result_value_separator = default_string ", "
 end
 
 module SRS_defaults = struct
