@@ -99,8 +99,6 @@ let parse_result res fmt sep =
   with Not_found ->
     failwith (sprintf "parse_result: missing keys")
 
-let max_depth = 100
-
 module ResultSet = Set.Make(struct
   type t = string
   let compare = Pervasives.compare
@@ -112,6 +110,7 @@ let query key table =
   let socket = Config.proxymap_query_socket () in
   let res_fmt = Config.proxymap_result_format () in
   let sep = Config.proxymap_result_value_separator () in
+  let max_depth = Config.proxymap_max_query_depth () in
   let make_query key table =
     let req = build_request query_fmt table flags key in
     lwt raw_res = make_request socket req in

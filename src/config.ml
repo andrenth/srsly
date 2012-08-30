@@ -24,6 +24,7 @@ type proxymap_config =
   ; query_fmt              : string
   ; query_flags            : int
   ; query_socket           : Lwt_io.file_name
+  ; max_query_depth        : int
   ; result_fmt             : string
   ; result_value_separator : string
   }
@@ -139,6 +140,7 @@ module Proxymap_defaults = struct
   let query_flags = default_int
     16448 (* DICT_FLAG_FOLD_FIX | DICT_FLAG_LOCK *)
   let query_socket = default_string "/var/spool/postfix/private/proxymap"
+  let max_query_depth = default_int 100
   let result_fmt = default_string
     "status\000{s}\000value\000{v}\000\000"
   let result_value_separator = default_string ", "
@@ -186,6 +188,7 @@ let proxymap_spec =
     ; "query_format", D.query_fmt, [string]
     ; "query_flags", D.query_flags, [int]
     ; "query_socket", D.query_socket, [unix_socket]
+    ; "maximum_query_depth", D.max_query_depth, [int_greater_than 0]
     ; "result_format", D.result_fmt, [string]
     ; "result_value_separator", D.result_value_separator, [string]
     ])
@@ -254,6 +257,7 @@ let make c =
     ; query_fmt = string_value (get "query_format" c)
     ; query_flags  = int_value (get "query_flags" c)
     ; query_socket = string_value (get "query_socket" c)
+    ; max_query_depth = int_value (get "maximum_query_depth" c)
     ; result_fmt = string_value (get "result_format" c)
     ; result_value_separator = string_value (get "result_value_separator" c)
     } in
@@ -380,6 +384,9 @@ let proxymap_query_flags () =
 
 let proxymap_query_socket () =
   (current ()).proxymap.query_socket
+
+let proxymap_max_query_depth () =
+  (current ()).proxymap.max_query_depth
 
 let proxymap_result_format () =
   (current ()).proxymap.result_fmt
