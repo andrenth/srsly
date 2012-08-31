@@ -152,7 +152,7 @@ let (=~) s re =
 
 let proxymap_key fmt addr =
   try
-    let at = String.index addr '@' in
+    let at = String.rindex addr '@' in
     let user = String.sub addr 0 at in
     let domain = String.sub addr (at+1) (String.length addr - at - 1) in
     replace_formats fmt
