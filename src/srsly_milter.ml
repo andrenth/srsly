@@ -14,7 +14,7 @@ let read_configuration fd =
     | `Response (Configuration c) ->
         lwt () = notice "received a new configuration; replacing" in
         Config.replace c;
-        set_log_level (Config.log_level ());
+        set_log_level (Config.srslyd_log_level ());
         Milter.setdbg (Config.milter_debug_level ());
         return ()
     | `EOF | `Timeout as e ->
@@ -127,8 +127,8 @@ let () =
     else
       Config.load_defaults () in
   Lwt_main.run config_t;
-  set_log_level (Config.log_level ());
+  set_log_level (Config.srslyd_log_level ());
   Release.me
-    ~syslog:(Config.background ())
+    ~syslog:(Config.srslyd_background ())
     ~user:(Config.milter_user ())
     ~main:main ()

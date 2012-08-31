@@ -119,7 +119,7 @@ let spf_check_helo ctx priv =
       milter_reject ctx (SPF.smtp_comment c)
   | SPF.Temperror ->
       debug "HELO SPF temperror for %s" helo;
-      if (Config.fail_on_helo_temperror ()) then
+      if (Config.spf_fail_on_helo_temperror ()) then
         milter_tempfail ctx (SPF.header_comment spf_res)
       else
         Milter.Continue

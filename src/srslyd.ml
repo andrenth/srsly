@@ -95,14 +95,14 @@ let () =
   let config_t =
     O.either Config.load_defaults Config.load config_file in
   Lwt_main.run config_t;
-  set_log_level (Config.log_level ());
+  set_log_level (Config.srslyd_log_level ());
   let slave = (Config.milter_executable (), slave_ipc_handler) in
-  let background = Config.background () in
+  let background = Config.srslyd_background () in
   Release.master_slave
     ~syslog:background
     ~background:background
-    ~lock_file:(Config.lock_file ())
-    ~control:(Config.control_socket (), control_connection_handler)
+    ~lock_file:(Config.srslyd_lock_file ())
+    ~control:(Config.srslyd_control_socket (), control_connection_handler)
     ~main:main
     ~slave:slave
     ()

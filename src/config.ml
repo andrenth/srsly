@@ -7,6 +7,14 @@ open Util
 
 module O = Release_option
 
+type srslyd_config =
+  { lock_file      : Lwt_io.file_name
+  ; control_socket : Lwt_io.file_name
+  ; background     : bool
+  ; log_level      : Lwt_log.level
+  ; random_device  : Lwt_io.file_name
+  }
+
 type milter_config =
   { user           : string
   ; executable     : Lwt_io.file_name
@@ -29,6 +37,12 @@ type proxymap_config =
   ; result_value_separator : Str.regexp
   }
 
+type spf_config =
+  { fail_on_helo_temperror : bool
+  ; local_whitelist        : Network.t list
+  ; relay_whitelist        : Network.t list
+  }
+
 type srs_config =
   { secret_file   : Lwt_io.file_name
   ; hash_max_age  : int
@@ -38,17 +52,11 @@ type srs_config =
   }
 
 type t =
-  { lock_file              : Lwt_io.file_name
-  ; control_socket         : Lwt_io.file_name
-  ; background             : bool
-  ; log_level              : Lwt_log.level
-  ; fail_on_helo_temperror : bool
-  ; local_whitelist        : Network.t list
-  ; relay_whitelist        : Network.t list
-  ; random_device          : Lwt_io.file_name
-  ; milter                 : milter_config
-  ; proxymap               : proxymap_config
-  ; srs                    : srs_config
+  { srslyd   : srslyd_config
+  ; milter   : milter_config
+  ; proxymap : proxymap_config
+  ; spf      : spf_config
+  ; srs      : srs_config
   }
 
 let log_levels =
@@ -114,9 +122,6 @@ module Srslyd_defaults = struct
   let lock_file = default_string "/var/run/srslyd.pid"
   let control_socket = default_string "/var/run/srslyd.sock"
   let log_level = default_log_level Lwt_log.Notice
-  let fail_on_helo = default_bool true
-  let local_whitelist = default_string_list local_addresses
-  let relay_whitelist = default_string_list []
   let background = default_bool true
   let random_device = default_string "/dev/random"
 end
@@ -146,6 +151,12 @@ module Proxymap_defaults = struct
   let result_value_separator = default_regexp (Str.regexp ", *")
 end
 
+module SPF_defaults = struct
+  let fail_on_helo = default_bool true
+  let local_whitelist = default_string_list local_addresses
+  let relay_whitelist = default_string_list []
+end
+
 module SRS_defaults = struct
   let secret_file = default_string "/etc/srsly/srs_secrets"
   let hash_max_age = default_int 8
@@ -160,9 +171,6 @@ let srslyd_spec =
     [ "lock_file", D.lock_file, [existing_dirname]
     ; "control_socket", D.control_socket, [existing_dirname]
     ; "log_level", D.log_level, [log_level]
-    ; "fail_on_helo_temperror", D.fail_on_helo, [bool]
-    ; "local_whitelist", D.local_whitelist, [string_list]
-    ; "relay_whitelist", D.relay_whitelist, [string_list]
     ; "background", D.background, [bool]
     ; "random_device", D.random_device, [character_device]
     ])
@@ -193,6 +201,14 @@ let proxymap_spec =
     ; "result_value_separator", D.result_value_separator, [regexp]
     ])
 
+let spf_spec =
+  let module D = SPF_defaults in
+  `Section ("spf",
+    [ "fail_on_helo_temperror", D.fail_on_helo, [bool]
+    ; "local_whitelist", D.local_whitelist, [string_list]
+    ; "relay_whitelist", D.relay_whitelist, [string_list]
+    ])
+
 let srs_spec =
   let module D = SRS_defaults in
   `Section ("srs",
@@ -207,6 +223,7 @@ let spec =
   [ srslyd_spec
   ; milter_spec
   ; proxymap_spec
+  ; spf_spec
   ; srs_spec
   ]
 
@@ -219,6 +236,9 @@ let find_milter key conf =
 let find_proxymap key conf =
   Release_config.get_exn conf ~section:"proxymap" key ()
 
+let find_spf key conf =
+  Release_config.get_exn conf ~section:"spf" key ()
+
 let find_srs key conf =
   Release_config.get_exn conf ~section:"srs" key ()
 
@@ -228,17 +248,14 @@ let find_srs_opt key conf =
 let whitelist_of_list = List.map Network.of_string
 
 let make c =
-  let get = find_srslyd in
-  let lock_file = string_value (get "lock_file" c) in
-  let control_socket = string_value (get "control_socket" c) in
-  let background = bool_value (get "background" c) in
-  let log_level = log_level_value (get "log_level" c) in
-  let fail_on_helo_temperror = bool_value (get "fail_on_helo_temperror" c) in
-  let local_whitelist =
-    whitelist_of_list (string_list_value (get "local_whitelist" c)) in
-  let relay_whitelist =
-    whitelist_of_list (string_list_value (get "relay_whitelist" c)) in
-  let random_device = string_value (get "random_device" c) in
+  let srslyd_config =
+    let get = find_srslyd in
+    { lock_file = string_value (get "lock_file" c)
+    ; control_socket = string_value (get "control_socket" c)
+    ; background = bool_value (get "background" c)
+    ; log_level = log_level_value (get "log_level" c)
+    ; random_device = string_value (get "random_device" c)
+    } in
   let milter_config =
     let get = find_milter in
     { user           = string_value (get "user" c)
@@ -261,6 +278,14 @@ let make c =
     ; result_fmt = string_value (get "result_format" c)
     ; result_value_separator = regexp_value (get "result_value_separator" c)
     } in
+  let spf_config =
+    let get = find_spf in
+    { fail_on_helo_temperror = bool_value (get "fail_on_helo_temperror" c)
+    ; local_whitelist =
+        whitelist_of_list (string_list_value (get "local_whitelist" c))
+    ; relay_whitelist =
+        whitelist_of_list (string_list_value (get "relay_whitelist" c))
+    } in
   let srs_config =
     let get = find_srs in
     { secret_file   = string_value (get "secret_file" c)
@@ -269,17 +294,11 @@ let make c =
     ; separator     = (string_value (get "separator" c)).[0]
     ; secret_length = int_value (get "secret_length" c)
     } in
-  { lock_file              = lock_file
-  ; control_socket         = control_socket
-  ; background             = background
-  ; log_level              = log_level
-  ; fail_on_helo_temperror = fail_on_helo_temperror
-  ; local_whitelist        = local_whitelist
-  ; relay_whitelist        = relay_whitelist
-  ; random_device          = random_device
-  ; milter                 = milter_config
-  ; proxymap               = proxymap_config
-  ; srs                    = srs_config
+  { srslyd   = srslyd_config
+  ; milter   = milter_config
+  ; proxymap = proxymap_config
+  ; spf      = spf_config
+  ; srs      = srs_config
   }
 
 let config_file = ref None
@@ -322,29 +341,20 @@ let serialize c =
 let unserialize s =
   Marshal.from_string s 0
 
-let lock_file () =
-  (current ()).lock_file
+let srslyd_lock_file () =
+  (current ()).srslyd.lock_file
 
-let control_socket () =
-  (current ()).control_socket
+let srslyd_control_socket () =
+  (current ()).srslyd.control_socket
 
-let log_level () =
-  (current ()).log_level
+let srslyd_log_level () =
+  (current ()).srslyd.log_level
 
-let local_whitelist () =
-  (current ()).local_whitelist
+let srslyd_background () =
+  (current ()).srslyd.background
 
-let relay_whitelist () =
-  (current ()).relay_whitelist
-
-let fail_on_helo_temperror () =
-  (current ()).fail_on_helo_temperror
-
-let background () =
-  (current ()).background
-
-let random_device () =
-  (current ()).random_device
+let srslyd_random_device () =
+  (current ()).srslyd.random_device
 
 let milter_user () =
   (current ()).milter.user
@@ -393,6 +403,15 @@ let proxymap_result_format () =
 
 let proxymap_result_value_separator () =
   (current ()).proxymap.result_value_separator
+
+let spf_fail_on_helo_temperror () =
+  (current ()).spf.fail_on_helo_temperror
+
+let spf_local_whitelist () =
+  (current ()).spf.local_whitelist
+
+let spf_relay_whitelist () =
+  (current ()).spf.relay_whitelist
 
 let srs_secret_file () =
   (current ()).srs.secret_file

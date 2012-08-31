@@ -7,14 +7,12 @@ val current : unit -> t
 val replace : t -> unit
 val serialize : t -> string
 val unserialize : string -> t
-val lock_file : unit -> Lwt_io.file_name
-val control_socket : unit -> string
-val log_level : unit -> Lwt_log.level
-val local_whitelist : unit -> Network.t list
-val relay_whitelist : unit -> Network.t list
-val fail_on_helo_temperror : unit -> bool
-val background : unit -> bool
-val random_device : unit -> Lwt_io.file_name
+
+val srslyd_lock_file : unit -> Lwt_io.file_name
+val srslyd_control_socket : unit -> string
+val srslyd_log_level : unit -> Lwt_log.level
+val srslyd_background : unit -> bool
+val srslyd_random_device : unit -> Lwt_io.file_name
 
 val milter_user : unit -> string
 val milter_executable : unit -> string
@@ -33,6 +31,10 @@ val proxymap_query_socket : unit -> Lwt_io.file_name
 val proxymap_max_query_depth : unit -> int
 val proxymap_result_format : unit -> string
 val proxymap_result_value_separator : unit -> Str.regexp
+
+val spf_local_whitelist : unit -> Network.t list
+val spf_relay_whitelist : unit -> Network.t list
+val spf_fail_on_helo_temperror : unit -> bool
 
 val srs_secret_file : unit -> Lwt_io.file_name
 val srs_hash_max_age : unit -> int

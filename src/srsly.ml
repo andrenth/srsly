@@ -10,7 +10,7 @@ let srslyd = "/usr/lib/srsly/srslyd"
 
 let control f =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-  let sock_addr = Lwt_unix.ADDR_UNIX (Config.control_socket ()) in
+  let sock_addr = Lwt_unix.ADDR_UNIX (Config.srslyd_control_socket ()) in
   lwt () =
     try_lwt
       Lwt_unix.connect fd sock_addr
@@ -49,7 +49,7 @@ let read_old_secrets () =
     return_nil
 
 let random_init () =
-  let random_dev = Config.random_device () in
+  let random_dev = Config.srslyd_random_device () in
   let ch = open_in random_dev in
   let seed = input_binary_int ch in
   close_in ch;
