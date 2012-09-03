@@ -2,7 +2,7 @@ open Lwt
 open Printf
 
 open Ipc.Slave_types
-open Log.Lwt
+open Log_lwt
 open Util
 
 let ipc_error = function

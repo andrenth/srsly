@@ -3,7 +3,7 @@ open Printf
 
 open Ipc.Control_types
 open Ipc.Slave_types
-open Log.Lwt
+open Log_lwt
 open Util
 
 module O = Release_option

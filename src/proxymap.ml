@@ -1,7 +1,7 @@
 open Lwt
 open Printf
 
-open Log.Lwt
+open Log_lwt
 open Util
 
 let replace_formats =

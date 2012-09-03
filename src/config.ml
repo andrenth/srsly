@@ -3,7 +3,7 @@ open Printf
 open Release_config_values
 open Release_config_validations
 
-open Log.Lwt
+open Log_lwt
 open Util
 
 module O = Release_option
