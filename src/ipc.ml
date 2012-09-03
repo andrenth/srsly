@@ -12,7 +12,7 @@ module Slave_types = struct
   type response
     = Configuration of Config.t
     | Remote_sender_check of bool
-    | Remote_final_rcpts_count of (string * int) list
+    | Remote_final_rcpt_counts of (string * int) list
     | SRS_secrets of (string * string list)
 end
 
@@ -39,14 +39,14 @@ module Slave_ops = struct
   let string_of_response = function
     | Configuration c -> sprintf "A:%s" (Config.serialize c)
     | Remote_sender_check b -> sprintf "B:%s" (string_of_bool b)
-    | Remote_final_rcpts_count rs -> sprintf "C:%s" (Marshal.to_string rs [])
+    | Remote_final_rcpt_counts rs -> sprintf "C:%s" (Marshal.to_string rs [])
     | SRS_secrets ss -> sprintf "D:%s" (Milter_srs.serialize_secrets ss)
 
   let response_of_string s =
     match s.[0] with
     | 'A' -> Configuration (Config.unserialize (payload s))
     | 'B' -> Remote_sender_check (bool_of_string (payload s))
-    | 'C' -> Remote_final_rcpts_count (Marshal.from_string s 2)
+    | 'C' -> Remote_final_rcpt_counts (Marshal.from_string s 2)
     | 'D' -> SRS_secrets (Milter_srs.unserialize_secrets (payload s))
     | other -> failwith (sprintf "unexpected response = '%c'" other)
 end

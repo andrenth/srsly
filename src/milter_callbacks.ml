@@ -45,7 +45,7 @@ end)
 
 type ops =
   { is_remote_sender         : (string -> bool Lwt.t)
-  ; count_remote_final_rcpts : (string list -> (string * int) list Lwt.t)
+  ; remote_final_rcpt_counts : (string list -> (string * int) list Lwt.t)
   }
 
 let proxymap_ops = ref None
@@ -58,9 +58,9 @@ let is_remote_sender sender =
     Lwt_preemptive.run_in_main (fun () -> ops.is_remote_sender sender) in
   O.may_default false run !proxymap_ops
 
-let count_remote_final_rcpts rcpts =
+let remote_final_rcpt_counts rcpts =
   let run ops =
-    Lwt_preemptive.run_in_main (fun () -> ops.count_remote_final_rcpts rcpts) in
+    Lwt_preemptive.run_in_main (fun () -> ops.remote_final_rcpt_counts rcpts) in
   O.may_default [] run !proxymap_ops
 
 let spf = SPF.server SPF.Dns_cache
@@ -299,7 +299,7 @@ let eom ctx =
       (if priv.is_bounce then
         reverse_srs_signed_rcpts ctx rcpts
       else if is_remote_sender from then
-        let counts = count_remote_final_rcpts rcpts in
+        let counts = remote_final_rcpt_counts rcpts in
         if counts <> [] then
           srs_forward ctx from counts);
       match priv.result with

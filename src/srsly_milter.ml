@@ -57,9 +57,9 @@ let proxymap_is_remote_sender fd =
   (fun sender ->
     Ipc.Slave.make_request fd (Check_remote_sender sender) handle_ipc)
 
-let proxymap_count_remote_final_rcpts fd =
+let proxymap_remote_final_rcpt_counts fd =
   let handle_ipc = function
-    | `Response (Remote_final_rcpts_count c) ->
+    | `Response (Remote_final_rcpt_counts c) ->
         lwt () =
           debug "received proxymap final destination counts: %s"
             (join_counts c) in
@@ -111,7 +111,7 @@ let main fd =
   lwt () = read_srs_secrets fd in
   let module C = Milter_callbacks in
   let callback_ops =
-    { C.count_remote_final_rcpts = proxymap_count_remote_final_rcpts fd
+    { C.remote_final_rcpt_counts = proxymap_remote_final_rcpt_counts fd
     ; C.is_remote_sender         = proxymap_is_remote_sender fd
     } in
   C.init callback_ops;
