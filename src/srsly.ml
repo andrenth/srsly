@@ -70,7 +70,7 @@ let make_secret () =
 let new_secret () =
   Lwt_io.printl (make_secret ())
 
-let add_secret () =
+let replace_secret () =
   let file = Config.srs_secret_file () in
   let dir = Config.srs_secrets_directory () in
   let old_file = dir ^"/"^ sprintf "%d.%.0f" (Unix.getpid ()) (Unix.time ()) in
@@ -105,7 +105,7 @@ let main argc argv =
   | "reload" -> reload config
   | "restart" -> restart config
   | "new-secret" -> new_secret ()
-  | "add-secret" -> add_secret ()
+  | "replace-secret" -> replace_secret ()
   | "help" -> usage 0
   | _ -> usage 1
 
