@@ -75,9 +75,12 @@ let with_priv_data z ctx f =
 
 let canonicalize a =
   let e = String.length a - 1 in
-  let a = if a.[0] = '<' && a.[e] = '>' then String.sub a 1 (e-1) else a in
-  let a = if a.[0] = '"' && a.[e] = '"' then String.sub a 1 (e-1) else a in
-  let e = String.length a - 1 in
+  let a, e =
+    if e > 0 && a.[0] = '<' && a.[e] = '>' then String.sub a 1 (e-1), e-1
+    else a, e in
+  let a, e =
+    if e > 0 && a.[0] = '"' && a.[e] = '"' then String.sub a 1 (e-1), e-1
+    else a, e in
   try
     let t = String.rindex a '@' in
     let u = String.sub a 0 (t) in
