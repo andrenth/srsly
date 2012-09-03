@@ -24,11 +24,16 @@ let signal_slaves signum =
 let no_config_warning () =
   warning "no configuration file given; try `srsly reload` to set one"
 
+let reload_config file =
+  lwt () = Config.load file in
+  set_log_level (Config.srslyd_log_level ());
+  return_unit
+
 let handle_sighup _ =
   ignore_result (info "got SIGHUP, reloading configuration");
   Lwt.async
     (fun () ->
-      lwt () = O.either no_config_warning Config.load (Config.file ()) in
+      lwt () = O.either no_config_warning reload_config (Config.file ()) in
       signal_slaves sighup)
 
 let rec handle_sigusr1 _ =
@@ -64,7 +69,7 @@ let control_connection_handler fd =
     | Reload_config file ->
         let reload file =
           lwt () = notice "reloading configuration at %s" file in
-          lwt () = Config.load file in
+          lwt () = reload_config file in
           signal_slaves sighup in
         let config_file = O.choose file (Config.file ()) in
         lwt () = O.either no_config_warning reload config_file in
