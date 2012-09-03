@@ -16,7 +16,6 @@ type priv =
   ; helo      : string option
   ; from      : string option
   ; rcpts     : string list
-  ; rev_rcpt  : string option
   ; is_bounce : bool
   ; result    : result
   }
@@ -170,10 +169,25 @@ let milter_add_header ctx (field, value) =
   debug "inserting header: %s: %s" field value;
   Milter.insheader ctx 1 field value
 
-let set_reverse_srs_rcpt ctx rcpt rev_rcpt =
-  info "replacing bounce destination '%s' with '%s'" rcpt rev_rcpt;
-  Milter.delrcpt ctx rcpt;
-  Milter.addrcpt ctx rev_rcpt
+let milter_replace_rcpt ctx old_rcpt new_rcpt =
+  Milter.delrcpt ctx old_rcpt;
+  Milter.addrcpt ctx new_rcpt
+
+let reverse_srs_signed_rcpts ctx rcpts =
+  let srs = Milter_srs.current () in
+  List.iter
+    (fun rcpt ->
+      if Str.string_match srs_re rcpt 0 then begin
+        debug "got an SRS-signed bounce";
+        let n = 1 + int_of_string (Str.matched_group 1 rcpt) in
+        try
+          let rev_rcpt = applyn (SRS.reverse srs) rcpt n in
+          info "SRS-reversed address for '%s': '%s'" rcpt rev_rcpt;
+          milter_replace_rcpt ctx rcpt rev_rcpt
+        with SRS.SRS_error e ->
+          notice "SRS failure: %s: %s" rcpt e
+      end)
+    rcpts
 
 let whitelist h =
   Whitelisted h
@@ -214,7 +228,7 @@ let srs_forward ctx from remote_rcpt_counts =
   debug "choosing an SRS domain from %s"
     (join_strings ", " (List.map fst remote_rcpt_counts));
   let fwd = choose_forward_domain remote_rcpt_counts in
-  debug "randomly chosen SRS forward domain: %s" fwd;
+  debug "randomly chosen SRS forward domain for '%s': '%s'" from fwd;
   let srs_from = SRS.forward srs from fwd in
   info "SRS-forwarding %s as %s" from srs_from;
   Milter.chgfrom ctx srs_from None
@@ -231,7 +245,6 @@ let connect ctx host addr =
     ; helo      = None
     ; from      = None
     ; rcpts     = []
-    ; rev_rcpt  = None
     ; is_bounce = false
     ; result    = result
     } in
@@ -275,32 +288,20 @@ let envrcpt ctx rcpt args =
     (fun priv ->
       let rcpt = canonicalize rcpt in
       let priv = { priv with rcpts = rcpt::priv.rcpts } in
-      if priv.is_bounce && Str.string_match srs_re rcpt 0 then begin
-        debug "got an SRS-signed bounce";
-        try
-          let n = 1 + int_of_string (Str.matched_group 1 rcpt) in
-          let srs = Milter_srs.current () in
-          let rev_rcpt = applyn (SRS.reverse srs) rcpt n in
-          info "SRS-reversed address for '%s': '%s'" rcpt rev_rcpt;
-          { priv with rev_rcpt = Some rev_rcpt }, Milter.Continue
-        with SRS.SRS_error s ->
-          notice "SRS failure: %s: %s" rcpt s;
-          priv, milter_reject ctx s
-      end else
-        priv, Milter.Continue)
+      priv, Milter.Continue)
 
 let eom ctx =
   debug "eom callback";
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
       let from = O.some priv.from in
-      O.may (set_reverse_srs_rcpt ctx from) priv.rev_rcpt;
       let rcpts = priv.rcpts in
-      if is_remote_sender from then begin
-        match count_remote_final_rcpts rcpts with
-        | [] -> ()
-        | rc -> srs_forward ctx from rc
-      end;
+      (if priv.is_bounce then
+        reverse_srs_signed_rcpts ctx rcpts
+      else if is_remote_sender from then
+        let counts = count_remote_final_rcpts rcpts in
+        if counts <> [] then
+          srs_forward ctx from counts);
       match priv.result with
       | Whitelisted ((_, msg) as header) ->
           info "Whitelisted address: %s" msg;
