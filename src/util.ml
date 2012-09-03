@@ -18,12 +18,6 @@ let applyn f x n =
 let set_log_level level =
   Lwt_log.Section.set_level Lwt_log.Section.main level
 
-let warn fmt =
-  ksprintf print_endline fmt
-
-let err fmt =
-  ksprintf (fun s -> prerr_endline s; exit 1) fmt
-
 let fail_lwt s = raise_lwt (Failure s)
 
 let join_strings sep = function

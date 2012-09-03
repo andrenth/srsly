@@ -1,5 +1,5 @@
 /etc/srsly/srslyd.conf
-/etc/srsly/srs_secrets
+/etc/srsly/srs_secret
 /etc/rsyslog.d/srsly.conf
 /usr/lib/srsly/srslyd
 /usr/lib/srsly/srsly-milter

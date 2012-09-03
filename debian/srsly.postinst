@@ -7,8 +7,11 @@ case "$1" in
     if ! dpkg-statoverride --list /etc/srsly/srslyd.conf >/dev/null 2>&1; then
       dpkg-statoverride --update --add root root 0600 /etc/srsly/srslyd.conf
     fi
-    if ! dpkg-statoverride --list /etc/srsly/srs_secrets >/dev/null 2>&1; then
-      dpkg-statoverride --update --add root root 0600 /etc/srsly/srs_secrets
+    if ! dpkg-statoverride --list /etc/srsly/srs_secret >/dev/null 2>&1; then
+      dpkg-statoverride --update --add root root 0600 /etc/srsly/srs_secret
+    fi
+    if ! dpkg-statoverride --list /etc/srsly/srs_secrets.d >/dev/null 2>&1; then
+      dpkg-statoverride --update --add root root 0700 /etc/srsly/srs_secrets.d
     fi
     if ! dpkg-statoverride --list /var/lib/srsly >/dev/null 2>&1; then
       dpkg-statoverride --update --add root root 0711 /var/lib/srsly
@@ -18,9 +21,9 @@ case "$1" in
         dpkg-statoverride --update --add root root 0700 $exec
       fi
     done
-    if [ ! -s /etc/srsly/srs_secrets ]; then
+    if [ ! -s /etc/srsly/srs_secret ]; then
       echo 'generating random SRS secret'
-      srsly new-secret /etc/srsly/srslyd.conf > /etc/srsly/srs_secrets
+      srsly new-secret /etc/srsly/srslyd.conf > /etc/srsly/srs_secret
     fi
   ;;
 

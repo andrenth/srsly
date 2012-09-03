@@ -3,6 +3,7 @@ open Printf
 open Release_config_values
 open Release_config_validations
 
+open Log.Lwt
 open Util
 
 module O = Release_option
@@ -44,11 +45,12 @@ type spf_config =
   }
 
 type srs_config =
-  { secret_file   : Lwt_io.file_name
-  ; hash_max_age  : int
-  ; hash_length   : int
-  ; separator     : char
-  ; secret_length : int
+  { secret_file       : Lwt_io.file_name
+  ; secrets_directory : Lwt_io.file_name
+  ; hash_max_age      : int
+  ; hash_length       : int
+  ; separator         : char
+  ; secret_length     : int
   }
 
 type t =
@@ -90,6 +92,13 @@ let local_addresses =
 
 let secure_secret_file =
   [ file_with_mode 0o600
+  ; file_with_owner "root"
+  ; file_with_group "root"
+  ]
+
+let secure_secrets_directory =
+  [ existing_directory
+  ; file_with_mode 0o700
   ; file_with_owner "root"
   ; file_with_group "root"
   ]
@@ -158,7 +167,8 @@ module SPF_defaults = struct
 end
 
 module SRS_defaults = struct
-  let secret_file = default_string "/etc/srsly/srs_secrets"
+  let secret_file = default_string "/etc/srsly/srs_secret"
+  let secrets_directory = default_string "/etc/srsly/srs_secrets.d"
   let hash_max_age = default_int 8
   let hash_length = default_int 8
   let separator = default_string "="
@@ -213,6 +223,7 @@ let srs_spec =
   let module D = SRS_defaults in
   `Section ("srs",
     [ "secret_file", D.secret_file, secure_secret_file
+    ; "secrets_directory", D.secrets_directory, secure_secrets_directory
     ; "hash_max_age", D.hash_max_age, [int]
     ; "hash_length", D.hash_length, [int]
     ; "separator", D.separator, [string_in ["+"; "-"; "="]]
@@ -288,11 +299,12 @@ let make c =
     } in
   let srs_config =
     let get = find_srs in
-    { secret_file   = string_value (get "secret_file" c)
-    ; hash_max_age  = int_value (get "hash_max_age" c)
-    ; hash_length   = int_value (get "hash_length" c)
-    ; separator     = (string_value (get "separator" c)).[0]
-    ; secret_length = int_value (get "secret_length" c)
+    { secret_file       = string_value (get "secret_file" c)
+    ; secrets_directory = string_value (get "secrets_directory" c)
+    ; hash_max_age      = int_value (get "hash_max_age" c)
+    ; hash_length       = int_value (get "hash_length" c)
+    ; separator         = (string_value (get "separator" c)).[0]
+    ; secret_length     = int_value (get "secret_length" c)
     } in
   { srslyd   = srslyd_config
   ; milter   = milter_config
@@ -308,6 +320,8 @@ let file () =
   !config_file
 
 let load file =
+  let err fmt =
+    ksprintf (fun s -> lwt () = error "%s" s in exit 1) fmt in
   try_lwt
     lwt st = Lwt_unix.lstat file in
     if st.Lwt_unix.st_kind = Lwt_unix.S_REG then
@@ -329,7 +343,7 @@ let load_defaults () =
 
 let current () =
   match !configuration with
-  | None -> err "no config!"
+  | None -> fprintf stderr "no config!"; exit 1
   | Some c -> c
 
 let replace c =
@@ -415,6 +429,9 @@ let spf_relay_whitelist () =
 
 let srs_secret_file () =
   (current ()).srs.secret_file
+
+let srs_secrets_directory () =
+  (current ()).srs.secrets_directory
 
 let srs_hash_max_age () =
   (current ()).srs.hash_max_age

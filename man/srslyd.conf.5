@@ -310,11 +310,17 @@ This section defines the SRS settings used by srslyd(8).
 
 .TP
 .I secret_file (string)
-Configures the path where srslyd(8) will read the secrets used to generate
-and reverse SRS addresses.  Secrets should be listed one per line.  The first
-secret will be the one used to generate forwad addresses.  Other secrets will
-be used (alongside the first one) when trying to reverse an SRS-signed address
-in an incoming bounce message.  Defaults to "/etc/srsly/srs_secrets".
+Configures the path where srslyd(8) will read the secret used to generate
+and SRS-rewritten addresses.  Only the first line of the file will be read;
+the rest will be ignored.  Defaults to "/etc/srsly/srs_secret".
+
+.TP
+.I secrets_directory (string)
+Configured the directory whose files srslyd(8) will read old SRS secrets from.
+Replaced SRS secrets are kept in this directory so that they can be used to
+reverse SRS-signed addresses in bounce messages.  Please see srsly(1) for
+details on changing the SRS secret.  This parameter defaults to
+"/etc/srsly/srs_secrets.d".
 
 .TP
 .I secret_length (integer)

@@ -2,11 +2,15 @@ open Lwt
 open Printf
 
 open Ipc.Control_types
+open Log.Lwt
 open Util
 
 module O = Release_option
 
 let srslyd = "/usr/lib/srsly/srslyd"
+
+let err fmt =
+  ksprintf (fun s -> lwt () = error "%s" s in exit 1) fmt
 
 let control f =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
@@ -37,16 +41,13 @@ let restart config =
   lwt () = stop () in
   start config
 
-let read_old_secrets () =
+let read_old_secret () =
   try_lwt
-    lwt st = Lwt_unix.lstat (Config.srs_secret_file ()) in
-    if st.Lwt_unix.st_size > 0 then
-      lwt old, older = Srs_util.read_srs_secrets () in
-      return (old::older)
-    else
-      return_nil
-  with _ ->
-    return_nil
+    let file = Config.srs_secret_file () in
+    Lwt_io.with_file ~mode:Lwt_io.input file Lwt_io.read_line
+  with Unix.Unix_error (e, _, _) ->
+    lwt () = error "cannot read SRS secret: %s" (Unix.error_message e) in
+    exit 1
 
 let random_init () =
   let random_dev = Config.srslyd_random_device () in
@@ -70,11 +71,16 @@ let new_secret () =
   Lwt_io.printl (make_secret ())
 
 let add_secret () =
+  let file = Config.srs_secret_file () in
+  let dir = Config.srs_secrets_directory () in
+  let old_file = dir ^"/"^ sprintf "%d.%.0f" (Unix.getpid ()) (Unix.time ()) in
+  let output = Lwt_io.output in
+  let write_secret secret ch =
+    Lwt_io.write_line ch secret in
+  lwt old_secret = read_old_secret () in
+  lwt () = Lwt_io.with_file ~mode:output old_file (write_secret old_secret) in
   let secret = make_secret () in
-  lwt old_secrets = read_old_secrets () in
-  let ch = open_out (Config.srs_secret_file ()) in
-  List.iter (fprintf ch "%s\n") (secret::old_secrets);
-  close_out ch;
+  lwt () = Lwt_io.with_file ~mode:output file (write_secret secret) in
   let handler = function
     | `EOF -> err "could not reload SRS secrets: EOF on control socket"
     | `Timeout -> err "could not reload SRS secrets: timeout on control socket"
@@ -83,6 +89,7 @@ let add_secret () =
   control (fun fd -> Ipc.Control.make_request fd Reload_secrets handler)
 
 let usage rc =
+  let warn = prerr_endline in
   warn "usage: srsly <command> [/path/to/config/file]";
   warn "  available commands: start, stop, reload, restart, add-secret";
   warn "  if no configuration file is given, default values will be used";
@@ -103,5 +110,8 @@ let main argc argv =
   | _ -> usage 1
 
 let () =
-  if Unix.getuid () <> 0 then err "srsly must be run as root";
+  if Unix.getuid () <> 0 then begin
+    fprintf stderr "srsly must be run as root";
+    exit 1
+  end;
   Lwt_main.run (main (Array.length Sys.argv) Sys.argv)

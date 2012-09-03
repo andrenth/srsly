@@ -37,6 +37,7 @@ val spf_relay_whitelist : unit -> Network.t list
 val spf_fail_on_helo_temperror : unit -> bool
 
 val srs_secret_file : unit -> Lwt_io.file_name
+val srs_secrets_directory : unit -> Lwt_io.file_name
 val srs_hash_max_age : unit -> int
 val srs_hash_length : unit -> int
 val srs_separator : unit -> char
