@@ -61,15 +61,6 @@ type t =
   ; srs      : srs_config
   }
 
-let log_levels =
-  [ "debug"
-  ; "info"
-  ; "notice"
-  ; "warning"
-  ; "error"
-  ; "fatal"
-  ]
-
 let socket_string = function
   | `Str s ->
       if Str.string_match (Str.regexp "^\\(unix\\|local\\):\\(.+\\)") s 0 then
