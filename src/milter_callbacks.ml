@@ -149,7 +149,9 @@ let spf_check ctx priv from =
     let spf_res, milter_res = spf_check_helo ctx priv in
     match milter_res with
     | Milter.Continue ->
-        let spf_res, milter_res = spf_check_from ctx priv from in
+        let spf_res, milter_res =
+          if from <> "" then spf_check_from ctx priv from
+          else spf_res, milter_res in
         Some spf_res, milter_res
     | other ->
         Some spf_res, milter_res
