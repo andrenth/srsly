@@ -261,10 +261,16 @@ The location of the
 socket on the file system. Defaults to "/var/spool/postfix/private/proxymap".
 
 .TP
-.I maximum_query_depth (int)
+.I sender_query_max_depth (integer)
 Specifies the maximum recursion depth on
 .I proxymap
-queries. Defaults to 100.
+queries for sender lookups. Defaults to 1.
+
+.TP
+.I recipient_query_max_depth (integer)
+Specifies the maximum recursion depth on
+.I proxymap
+queries for recipient lookups. Defaults to 20.
 
 .TP
 .I result_format (string)

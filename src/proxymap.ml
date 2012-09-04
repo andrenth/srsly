@@ -103,13 +103,12 @@ module ResultSet = Set.Make(struct
   let compare = Pervasives.compare
 end)
 
-let query key table =
+let query key table max_depth =
   let query_fmt = Config.proxymap_query_format () in
   let flags = Config.proxymap_query_flags () in
   let socket = Config.proxymap_query_socket () in
   let res_fmt = Config.proxymap_result_format () in
   let sep = Config.proxymap_result_value_separator () in
-  let max_depth = Config.proxymap_max_query_depth () in
   let make_query key table =
     let req = build_request query_fmt table flags key in
     lwt raw_res = make_request socket req in
@@ -168,11 +167,12 @@ let is_remote_sender sender =
   let re = Config.proxymap_local_sender_regexp () in
   let fmt = Config.proxymap_sender_lookup_key_format () in
   let key = proxymap_key fmt sender in
+  let max_depth = Config.proxymap_sender_query_max_depth () in
   lwt () = debug "is_remote_sender: querying for '%s'" key in
   (* The sender should translate to a single address, so it would probably
    * be safe to return just the first element of the result, but who knows
    * whatever crazy postfix configurations exist out there. *)
-  lwt res = query key table in
+  lwt res = query key table max_depth in
   return (List.exists (fun s -> not (s =~ re)) res)
 
 module type COUNT_MAP = sig
@@ -216,12 +216,13 @@ let filter_remote addrs =
 let count_remote_final_rcpts orig_rcpts =
   let table = Config.proxymap_recipient_lookup_table () in
   let fmt = Config.proxymap_recipient_lookup_key_format () in
+  let max_depth = Config.proxymap_recipient_query_max_depth () in
   lwt counts =
     Lwt_list.fold_left_s
       (fun acc rcpt ->
         let key = proxymap_key fmt rcpt in
         lwt () = debug "count_remote_final_rcpts: querying for '%s'" key in
-        lwt addrs = query key table in
+        lwt addrs = query key table max_depth in
         let remote, n = filter_remote addrs in
         match n with
         | 0 -> return acc
