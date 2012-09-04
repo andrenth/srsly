@@ -138,7 +138,7 @@ let rec_query key table max_depth max_results =
               let num_res' = num_res + 1 in
               if num_res' > max_results then
                 lwt () = error "maximum results for %s in %s" key table in
-                resolve [] depth num_res' results
+                return results
               else
                 resolve rest depth num_res' (ResultSet.add k results)
           | other ->
