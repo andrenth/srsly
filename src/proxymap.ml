@@ -130,19 +130,19 @@ let rec_query key table max_depth =
           lwt () = debug "querying key %s" key in
           match_lwt make_query key table with
           | Ok values ->
-              lwt () =
-                debug "redirects for %s: %s" key (join_strings values) in
-              resolve values (depth + 1) results
+              lwt () = debug "redirects for %s: %s"
+                key (join_strings values) in
+              lwt res = resolve values (depth + 1) results in
+              resolve rest depth (ResultSet.union results res)
           | Key_not_found ->
               lwt () = debug "no redirects found for %s" key in
               resolve rest depth (ResultSet.add key results)
           | other ->
               let e = string_of_status other in
-              lwt () = error "proxymap query error in table %s: %s" table e in
+              lwt () = error "proxymap error in table %s: %s" table e in
               resolve rest depth results
         end else begin
-          lwt () =
-            error "proxymap query maximum depth reached in table %s" table in
+          lwt () = error "proxymap maximum depth reached in table %s" table in
           resolve rest depth results
         end in
   lwt res = resolve [key] 0 ResultSet.empty in
