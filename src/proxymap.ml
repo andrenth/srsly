@@ -103,16 +103,22 @@ module ResultSet = Set.Make(struct
   let compare = Pervasives.compare
 end)
 
-let query key table max_depth =
+let make_query key table =
   let query_fmt = Config.proxymap_query_format () in
   let flags = Config.proxymap_query_flags () in
   let socket = Config.proxymap_query_socket () in
   let res_fmt = Config.proxymap_result_format () in
   let sep = Config.proxymap_result_value_separator () in
-  let make_query key table =
-    let req = build_request query_fmt table flags key in
-    lwt raw_res = make_request socket req in
-    return (parse_result raw_res res_fmt sep) in
+  let req = build_request query_fmt table flags key in
+  lwt raw_res = make_request socket req in
+  return (parse_result raw_res res_fmt sep)
+
+(*
+ * Query the given table looking for a recipient key. Results are recursively
+ * queried depth-first and recursion stops when a key is not found. The keys
+ * which resulted in the "not found" result are returned.
+ *)
+let rec_query key table max_depth =
   let rec resolve keys depth results =
     match keys with
     | [] ->
@@ -141,6 +147,28 @@ let query key table max_depth =
         end in
   lwt res = resolve [key] 0 ResultSet.empty in
   return (ResultSet.elements res)
+
+(* Make a single non-recursive query on the table for the given key. *)
+let single_query key table =
+  match_lwt make_query key table with
+  | Ok values ->
+      lwt () = debug "results for %s: %s" key (join_strings values) in
+      return values
+  | Key_not_found ->
+      lwt () = debug "no results for %s" key in
+      return_nil
+  | other ->
+      let e = string_of_status other in
+      lwt () = error "proxymap error in table %s: %s" table e in
+      return_nil
+
+let query key table max_depth =
+  if max_depth = 1 then
+    (* Don't waste time recursing just to get a failure and return the
+     * first result anyway. *)
+    single_query key table
+  else
+    rec_query key table max_depth
 
 let (=~) s re =
   try
