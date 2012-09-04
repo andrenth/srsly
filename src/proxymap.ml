@@ -120,7 +120,7 @@ let query key table max_depth =
         return results
     | key::rest ->
         lwt () = debug "keys: %s; depth %d" (join_strings keys) depth in
-        if depth < max_depth then begin
+        if depth <= max_depth then begin
           lwt () = debug "querying key %s" key in
           match_lwt make_query key table with
           | Ok values ->
