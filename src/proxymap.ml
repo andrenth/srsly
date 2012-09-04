@@ -118,42 +118,60 @@ let make_query key table =
  * queried depth-first and recursion stops when a key is not found. The keys
  * which resulted in the "not found" result are returned.
  *)
-let rec_query key table max_depth =
-  let rec resolve keys depth results =
+let rec_query key table max_depth max_results =
+  let rec resolve keys depth num_res results =
     match keys with
     | [] ->
         lwt () = debug "no more keys, returning" in
         return results
-    | key::rest ->
+    | k::rest ->
         lwt () = debug "keys: %s; depth %d" (join_strings keys) depth in
         if depth <= max_depth then begin
-          lwt () = debug "querying key %s" key in
-          match_lwt make_query key table with
+          lwt () = debug "querying key %s" k in
+          match_lwt make_query k table with
           | Ok values ->
-              lwt () = debug "redirects for %s: %s"
-                key (join_strings values) in
-              lwt res = resolve values (depth + 1) results in
-              resolve rest depth (ResultSet.union results res)
+              lwt () = debug "redirects for %s: %s" k (join_strings values) in
+              lwt res = resolve values (depth + 1) num_res results in
+              resolve rest depth num_res (ResultSet.union results res)
           | Key_not_found ->
-              lwt () = debug "no redirects found for %s" key in
-              resolve rest depth (ResultSet.add key results)
+              lwt () = debug "no redirects found for %s" k in
+              let num_res' = num_res + 1 in
+              if num_res' > max_results then
+                lwt () = error "maximum results for %s in %s" key table in
+                resolve [] depth num_res' results
+              else
+                resolve rest depth num_res' (ResultSet.add k results)
           | other ->
               let e = string_of_status other in
-              lwt () = error "proxymap error in table %s: %s" table e in
-              resolve rest depth results
+              lwt () = error "error querying %s for %s: %s" table key e in
+              resolve rest depth num_res results
         end else begin
-          lwt () = error "proxymap maximum depth reached in table %s" table in
-          resolve rest depth results
+          lwt () = error "maximum depth reached in %s for %s" table key in
+          resolve rest depth num_res results
         end in
-  lwt res = resolve [key] 0 ResultSet.empty in
+  lwt res = resolve [key] 0 0 ResultSet.empty in
   return (ResultSet.elements res)
 
+let take n l =
+  let rec take k acc = function
+    | [] -> acc, (n-k)
+    | x::xs ->
+        if k = 0 then acc, n
+        else take (k-1) (x::acc) xs in
+  take n [] l
+
 (* Make a single non-recursive query on the table for the given key. *)
-let single_query key table =
+let single_query key table max_results =
   match_lwt make_query key table with
   | Ok values ->
       lwt () = debug "results for %s: %s" key (join_strings values) in
-      return values
+      (* Try to get more than the max allowed results then see if we got it. *)
+      let res, n = take (max_results+1) values in
+      if n > max_results then
+        lwt () = error "maximum results for %s in %s" key table in
+        return (List.tl res)
+      else
+        return res
   | Key_not_found ->
       lwt () = debug "no results for %s" key in
       return_nil
@@ -196,11 +214,12 @@ let is_remote_sender sender =
   let fmt = Config.proxymap_sender_lookup_key_format () in
   let key = proxymap_key fmt sender in
   let max_depth = Config.proxymap_sender_query_max_depth () in
+  let max_results = Config.proxymap_sender_query_max_results () in
   lwt () = debug "is_remote_sender: querying for '%s'" key in
   (* The sender should translate to a single address, so it would probably
    * be safe to return just the first element of the result, but who knows
    * whatever crazy postfix configurations exist out there. *)
-  lwt res = query key table max_depth in
+  lwt res = query key table max_depth max_results in
   return (List.exists (fun s -> not (s =~ re)) res)
 
 module type COUNT_MAP = sig
@@ -245,12 +264,13 @@ let count_remote_final_rcpts orig_rcpts =
   let table = Config.proxymap_recipient_lookup_table () in
   let fmt = Config.proxymap_recipient_lookup_key_format () in
   let max_depth = Config.proxymap_recipient_query_max_depth () in
+  let max_results = Config.proxymap_recipient_query_max_results () in
   lwt counts =
     Lwt_list.fold_left_s
       (fun acc rcpt ->
         let key = proxymap_key fmt rcpt in
         lwt () = debug "count_remote_final_rcpts: querying for '%s'" key in
-        lwt addrs = query key table max_depth in
+        lwt addrs = query key table max_depth max_results in
         let remote, n = filter_remote addrs in
         match n with
         | 0 -> return acc

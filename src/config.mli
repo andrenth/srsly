@@ -30,6 +30,8 @@ val proxymap_query_flags : unit -> int
 val proxymap_query_socket : unit -> Lwt_io.file_name
 val proxymap_sender_query_max_depth : unit -> int
 val proxymap_recipient_query_max_depth : unit -> int
+val proxymap_sender_query_max_results : unit -> int
+val proxymap_recipient_query_max_results : unit -> int
 val proxymap_result_format : unit -> string
 val proxymap_result_value_separator : unit -> Str.regexp
 

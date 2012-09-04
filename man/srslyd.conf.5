@@ -273,6 +273,18 @@ Specifies the maximum recursion depth on
 queries for recipient lookups. Defaults to 20.
 
 .TP
+.I sender_query_max_results (integer)
+Specifies the maximum number of results returned from
+.I proxymap
+queries for sender lookups. Defaults to 1.
+
+.TP
+.I recipient_query_max_results (integer)
+Specifies the maximum number of results returned from
+.I proxymap
+queries for recipient lookups. Defaults to 100.
+
+.TP
 .I result_format (string)
 Defines the format of the response sent by
 .I proxymap.

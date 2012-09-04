@@ -24,19 +24,21 @@ type milter_config =
   }
 
 type proxymap_config =
-  { sender_lookup_table    : string
-  ; rcpt_lookup_table      : string
-  ; sender_lookup_key_fmt  : string
-  ; rcpt_lookup_key_fmt    : string
-  ; local_sender_regexp    : Str.regexp
-  ; local_rcpt_regexp      : Str.regexp
-  ; query_fmt              : string
-  ; query_flags            : int
-  ; query_socket           : Lwt_io.file_name
-  ; sender_query_max_depth : int
-  ; rcpt_query_max_depth   : int
-  ; result_fmt             : string
-  ; result_value_separator : Str.regexp
+  { sender_lookup_table      : string
+  ; rcpt_lookup_table        : string
+  ; sender_lookup_key_fmt    : string
+  ; rcpt_lookup_key_fmt      : string
+  ; local_sender_regexp      : Str.regexp
+  ; local_rcpt_regexp        : Str.regexp
+  ; query_fmt                : string
+  ; query_flags              : int
+  ; query_socket             : Lwt_io.file_name
+  ; sender_query_max_depth   : int
+  ; rcpt_query_max_depth     : int
+  ; sender_query_max_results : int
+  ; rcpt_query_max_results   : int
+  ; result_fmt               : string
+  ; result_value_separator   : Str.regexp
   }
 
 type spf_config =
@@ -148,6 +150,8 @@ module Proxymap_defaults = struct
   let query_socket = default_string "/var/spool/postfix/private/proxymap"
   let sender_query_max_depth = default_int 1
   let rcpt_query_max_depth = default_int 20
+  let sender_query_max_results = default_int 1
+  let rcpt_query_max_results = default_int 100
   let result_fmt = default_string
     "status\000{s}\000value\000{v}\000\000"
   let result_value_separator = default_regexp (Str.regexp ", *")
@@ -201,6 +205,10 @@ let proxymap_spec =
     ; "query_socket", D.query_socket, [unix_socket]
     ; "sender_query_max_depth", D.sender_query_max_depth, [int_greater_than 0]
     ; "recipient_query_max_depth", D.rcpt_query_max_depth, [int_greater_than 0]
+    ; "sender_query_max_results", D.sender_query_max_results,
+        [int_greater_than 0]
+    ; "recipient_query_max_results", D.rcpt_query_max_results,
+        [int_greater_than 0]
     ; "result_format", D.result_fmt, [string]
     ; "result_value_separator", D.result_value_separator, [regexp]
     ])
@@ -281,6 +289,8 @@ let make c =
     ; query_socket = string_value (get "query_socket" c)
     ; sender_query_max_depth = int_value (get "sender_query_max_depth" c)
     ; rcpt_query_max_depth = int_value (get "recipient_query_max_depth" c)
+    ; sender_query_max_results = int_value (get "sender_query_max_results" c)
+    ; rcpt_query_max_results = int_value (get "recipient_query_max_results" c)
     ; result_fmt = string_value (get "result_format" c)
     ; result_value_separator = regexp_value (get "result_value_separator" c)
     } in
@@ -409,6 +419,12 @@ let proxymap_sender_query_max_depth () =
 
 let proxymap_recipient_query_max_depth () =
   (current ()).proxymap.rcpt_query_max_depth
+
+let proxymap_sender_query_max_results () =
+  (current ()).proxymap.sender_query_max_depth
+
+let proxymap_recipient_query_max_results () =
+  (current ()).proxymap.rcpt_query_max_results
 
 let proxymap_result_format () =
   (current ()).proxymap.result_fmt
