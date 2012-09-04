@@ -20,6 +20,6 @@ let set_log_level level =
 
 let fail_lwt s = raise_lwt (Failure s)
 
-let join_strings sep = function
+let join_strings = function
   | [] -> ""
-  | x::xs -> List.fold_left (fun acc y -> acc ^ sep ^ y) x xs
+  | x::xs -> List.fold_left (fun acc y -> acc ^ ", " ^ y) x xs

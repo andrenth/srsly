@@ -226,7 +226,7 @@ let choose_forward_domain rcpts =
 let srs_forward ctx from remote_rcpt_counts =
   let srs = Milter_srs.current () in
   debug "choosing an SRS domain from %s"
-    (join_strings ", " (List.map fst remote_rcpt_counts));
+    (join_strings (List.map fst remote_rcpt_counts));
   let fwd = choose_forward_domain remote_rcpt_counts in
   debug "randomly chosen SRS forward domain for '%s': '%s'" from fwd;
   let srs_from = SRS.forward srs from fwd in

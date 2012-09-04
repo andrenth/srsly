@@ -120,13 +120,13 @@ let query key table =
         lwt () = debug "no more keys, returning" in
         return results
     | key::rest ->
-        lwt () = debug "keys: %s; depth %d" (join_strings ", " keys) depth in
+        lwt () = debug "keys: %s; depth %d" (join_strings keys) depth in
         if depth < max_depth then begin
           lwt () = debug "querying key %s" key in
           match_lwt make_query key table with
           | Ok values ->
               lwt () =
-                debug "redirects for %s: %s" key (join_strings ", " values) in
+                debug "redirects for %s: %s" key (join_strings values) in
               resolve values (depth + 1) results
           | Key_not_found ->
               lwt () = debug "no redirects found for %s" key in
