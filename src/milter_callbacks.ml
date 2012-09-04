@@ -253,34 +253,35 @@ let connect ctx host addr =
 
 let helo ctx helo =
   debug "helo callback: helo=%s" (O.default "?" helo);
-  match helo with
-  | None ->
-      notice "remote didn't say HELO, rejecting message";
-      Milter.setreply ctx "503" (Some "5.0.0") (Some "Please say HELO");
-      Milter.Reject
-  | Some name ->
-      with_priv_data Milter.Tempfail ctx
-        (fun priv -> { priv with helo = Some name }, Milter.Continue)
+  with_priv_data Milter.Tempfail ctx
+    (fun priv ->
+      { priv with helo = helo}, Milter.Continue)
 
 let envfrom ctx from args =
   debug "envfrom callback: from=%s" from;
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
-      let from = canonicalize from in
-      let priv = { priv with from = Some from; is_bounce = from = "" } in
-      match priv.result with
-      | No_result | Spf_response _ ->
-          (* This callback may be called multiple times in the same
-           * connection, so ignore previous results if any. *)
-          debug "doing SPF verification";
-          let spf_res, milter_res = spf_check ctx priv from in
-          let result =
-            O.may_default priv.result (fun r -> Spf_response r) spf_res in
-          { priv with result = result }, milter_res
-      | Whitelisted _ ->
-          (* Whitelists are IP-based, so just move on. *)
-          debug "connect address is whitelisted";
-          priv, Milter.Continue)
+      match priv.helo with
+      | None ->
+          notice "remote didn't say HELO, rejecting message";
+          Milter.setreply ctx "503" (Some "5.0.0") (Some "Please say HELO");
+          priv, Milter.Reject
+      | Some _ ->
+          let from = canonicalize from in
+          let priv = { priv with from = Some from; is_bounce = from = "" } in
+          match priv.result with
+          | No_result | Spf_response _ ->
+              (* This callback may be called multiple times in the same
+               * connection, so ignore previous results if any. *)
+              debug "doing SPF verification";
+              let spf_res, milter_res = spf_check ctx priv from in
+              let result =
+                O.may_default priv.result (fun r -> Spf_response r) spf_res in
+              { priv with result = result }, milter_res
+          | Whitelisted _ ->
+              (* Whitelists are IP-based, so just move on. *)
+              debug "connect address is whitelisted";
+              priv, Milter.Continue)
 
 let envrcpt ctx rcpt args =
   debug "envrcpt callback: rcpt=%s" rcpt;
