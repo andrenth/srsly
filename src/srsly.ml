@@ -88,6 +88,33 @@ let replace_secret () =
     | `Response _ -> err "unexpected response on control socket" in
   control (fun fd -> Ipc.Control.make_request fd Reload_secrets handler)
 
+let seconds_of_days n =
+  float_of_int n *. 24.0 *. 60.0 *. 60.0
+
+let map_stream f s =
+  lwt u = Lwt_stream.fold (fun x u -> lwt () = u in f x) s return_unit in u
+
+let expire () =
+  let dir = Config.srs_secrets_directory () in
+  let max_age = seconds_of_days (Config.srs_hash_max_age ()) in
+  let secrets = Lwt_unix.files_of_directory dir in
+  let remove file =
+    if file <> "." && file <> ".." then
+      let path = dir ^ "/" ^ file in
+      try_lwt
+        lwt st = Lwt_unix.lstat path in
+        let mtime = st.Lwt_unix.st_mtime in
+        if Unix.time () -. mtime > max_age then
+          lwt () = info "removing expired secret in %s" path in
+          Lwt_unix.unlink path
+        else
+          debug "secret in %s still not expired" path
+      with Unix.Unix_error (e, _, _) ->
+        error "expire: %s: %s" path (Unix.error_message e)
+    else
+      return_unit in
+  map_stream remove secrets
+
 let usage rc =
   let warn = prerr_endline in
   warn "usage: srsly <command> [/path/to/config/file]";
@@ -106,6 +133,7 @@ let main argc argv =
   | "restart" -> restart config
   | "new-secret" -> new_secret ()
   | "replace-secret" -> replace_secret ()
+  | "expire" -> expire ()
   | "help" -> usage 0
   | _ -> usage 1
 
