@@ -72,23 +72,20 @@ let with_priv_data z ctx f =
   | None -> z
   | Some p -> let p', r = f p in Milter.setpriv ctx (Some p'); r
 
+(* Remove leading and trailing spaces, angle brackets and quotes. *)
+let canon_trim =
+  let re = Str.regexp "\\(^[ \t<\"]+\\|[ \t>\"]+$\\)" in
+  Str.global_replace re ""
+
 let canonicalize a =
-  let e = String.length a - 1 in
-  let a, e =
-    if e > 0 && a.[0] = '<' && a.[e] = '>' then String.sub a 1 (e-1), e-2
-    else a, e in
-  let a, e =
-    if e > 0 && a.[0] = '"' && a.[e] = '"' then String.sub a 1 (e-1), e-2
-    else a, e in
+  let a = canon_trim a in
   try
     let t = String.rindex a '@' in
     let u = String.sub a 0 t in
-    let d = String.sub a (t+1) (e-t) in
-    let l = String.length u in
-    let u =
-      if l > 0 && u.[0] = '"' && u.[t-1] = '"' then String.sub u 1 (t-2)
-      else u in
+    let d = String.sub a (t+1) (String.length a - t - 1) in
+    let u = canon_trim u in
     try
+      (* @mx.example.com:user@example.com -> user@example.com *)
       let v = String.rindex u ':' in
       let u = String.sub u (v+1) (String.length u - v - 1) in
       u ^ "@" ^ d
