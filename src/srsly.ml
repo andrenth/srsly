@@ -116,16 +116,18 @@ let expire () =
   map_stream remove secrets
 
 let usage rc =
-  let warn = prerr_endline in
-  warn "usage: srsly <command> [/path/to/config/file]";
-  warn "  available commands: start, stop, reload, restart, add-secret";
-  warn "  if no configuration file is given, default values will be used";
+  let warn = Lwt_io.eprintl in
+  warn "usage: srsly <command> [/path/to/config/file]" >>
+  warn "  commands: start, stop, reload, restart," >>
+  warn "            new-secret, replace-secret, expire" >>
+  warn "  if no configuration file is given, default values will be used" >>
   exit rc
 
 let main argc argv =
-  if argc = 1 then usage 1;
+  lwt () = if argc = 1 then usage 1 else return_unit in
   let config = if argc = 2 then "/etc/srsly/srslyd.conf" else argv.(2) in
   lwt () = Config.load config in
+  set_log_level (Config.srslyd_log_level ());
   match argv.(1) with
   | "start" -> start config
   | "stop" ->  stop ()
