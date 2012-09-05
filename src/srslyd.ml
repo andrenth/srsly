@@ -53,9 +53,7 @@ let slave_ipc_handler fd =
         lwt r = Proxymap.is_remote_sender s in
         return (Remote_sender_check r)
     | Count_remote_final_rcpts rcpts ->
-        lwt () =
-          debug "proxymap final destination count request for %s"
-            (join_strings rcpts) in
+        lwt () = debug "proxymap final destination count request" in
         lwt dests = Proxymap.count_remote_final_rcpts rcpts in
         return (Remote_final_rcpt_counts dests)
     | SRS_secrets_request ->

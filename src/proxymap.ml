@@ -16,7 +16,6 @@ let build_request fmt table flags key =
 
 let make_request socket req =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-  lwt () = debug "connecting to proxymap socket" in
   try_lwt
     lwt () = Lwt_unix.connect fd (Unix.ADDR_UNIX socket) in
     lwt () = Release_io.write fd (Release_buffer.of_string req) in
@@ -125,12 +124,10 @@ let rec_query key table max_depth max_results =
         lwt () = debug "no more keys, returning" in
         return results
     | k::rest ->
-        lwt () = debug "keys: %s; depth %d" (join_strings keys) depth in
         if depth <= max_depth then begin
           lwt () = debug "querying key %s" k in
           match_lwt make_query k table with
           | Ok values ->
-              lwt () = debug "redirects for %s: %s" k (join_strings values) in
               lwt res = resolve values (depth + 1) num_res results in
               resolve rest depth num_res (ResultSet.union results res)
           | Key_not_found ->
@@ -164,7 +161,6 @@ let take n l =
 let single_query key table max_results =
   match_lwt make_query key table with
   | Ok values ->
-      lwt () = debug "results for %s: %s" key (join_strings values) in
       (* Try to get more than the max allowed results then see if we got it. *)
       let res, n = take (max_results+1) values in
       if n > max_results then
