@@ -241,22 +241,19 @@ let spec =
   ]
 
 let find_srslyd key conf =
-  Release_config.get_exn conf ~section:"srslyd" key ()
+  Release_config.get conf "srslyd" key
 
 let find_milter key conf =
-  Release_config.get_exn conf ~section:"milter" key ()
+  Release_config.get conf "milter" key
 
 let find_proxymap key conf =
-  Release_config.get_exn conf ~section:"proxymap" key ()
+  Release_config.get conf "proxymap" key
 
 let find_spf key conf =
-  Release_config.get_exn conf ~section:"spf" key ()
+  Release_config.get conf "spf" key
 
 let find_srs key conf =
-  Release_config.get_exn conf ~section:"srs" key ()
-
-let find_srs_opt key conf =
-  Release_config.get conf ~section:"srs" key ()
+  Release_config.get conf "srs" key
 
 let whitelist_of_list = List.map Network.of_string
 
