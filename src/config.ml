@@ -45,6 +45,7 @@ type spf_config =
   { fail_on_helo_temperror : bool
   ; local_whitelist        : Network.t list
   ; relay_whitelist        : Network.t list
+  ; result_headers         : string list
   }
 
 type srs_config =
@@ -161,6 +162,7 @@ module SPF_defaults = struct
   let fail_on_helo = default_bool true
   let local_whitelist = default_string_list local_addresses
   let relay_whitelist = default_string_list []
+  let result_headers = default_string_list ["Authentication-Results"]
 end
 
 module SRS_defaults = struct
@@ -219,6 +221,8 @@ let spf_spec =
     [ "fail_on_helo_temperror", D.fail_on_helo, [bool]
     ; "local_whitelist", D.local_whitelist, [string_list]
     ; "relay_whitelist", D.relay_whitelist, [string_list]
+    ; "result_headers", D.result_headers,
+        [list_of (string_in ["Authentication-Results"; "Received-SPF"])]
     ])
 
 let srs_spec =
@@ -298,6 +302,7 @@ let make c =
         whitelist_of_list (string_list_value (get "local_whitelist" c))
     ; relay_whitelist =
         whitelist_of_list (string_list_value (get "relay_whitelist" c))
+    ; result_headers = string_list_value (get "result_headers" c)
     } in
   let srs_config =
     let get = find_srs in
@@ -437,6 +442,9 @@ let spf_local_whitelist () =
 
 let spf_relay_whitelist () =
   (current ()).spf.relay_whitelist
+
+let spf_result_headers () =
+  (current ()).spf.result_headers
 
 let srs_secret_file () =
   (current ()).srs.secret_file

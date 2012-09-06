@@ -323,6 +323,12 @@ Defaults to ["127.0.0.0/8", "::ffff:127.0.0.0/104"].
 Defines a list of IP addresses of trusted relays for which SPF verification
 will be skipped.  Defaults to [].
 
+.TP
+.I result_headers (string list)
+Defines which SPF result headers will be added to the message by srsly after
+SPF verification.  This can be either "Authentication-Results", the older
+"Received-SPF" or both.  Defaults to ["Authentication-Results"].
+
 .SS srs
 This section defines the SRS settings used by srslyd(8).
 

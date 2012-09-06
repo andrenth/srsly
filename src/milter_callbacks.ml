@@ -198,6 +198,18 @@ let authentication_results ctx priv spf_res =
   sprintf "%s; spf=%s (%s) smtp.mailfrom=%s smtp.helo=%s"
     myhostname res comm from helo
 
+let add_spf_header ctx priv resp = function
+  | "Authentication-Results" ->
+      let ar = authentication_results ctx priv resp in
+      milter_add_header ctx ("Authentication-Results", ar)
+  | "Received-SPF" ->
+      let rs = SPF.received_spf_value resp in
+      milter_add_header ctx ("Received-SPF", rs)
+  | h ->
+      error "invalid SPF header '%s'; using Authentication-Results instead" h;
+      let ar = authentication_results ctx priv resp in
+      milter_add_header ctx ("Authentication-Results", ar)
+
 let weighted_sample a =
   let tot = float_of_int (Array.fold_left (fun s (_, c) -> s + c) 0 a) in
   let r = tot *. (1.0 -. Random.float 1.0) in
@@ -305,9 +317,7 @@ let eom ctx =
           priv, Milter.Continue
       | Spf_response r ->
           info "SPF result: %s" (SPF.string_of_result (SPF.result r));
-          let ar = authentication_results ctx priv r in
-          milter_add_header ctx ("Authentication-Results", ar);
-          milter_add_header ctx ("Received-SPF", SPF.received_spf_value r);
+          List.iter (add_spf_header ctx priv r) (Config.spf_result_headers ());
           priv, Milter.Continue
       | No_result ->
           priv, Milter.Continue)
