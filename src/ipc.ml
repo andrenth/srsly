@@ -6,13 +6,13 @@ module Slave_types = struct
   type request
     = Configuration_request
     | Check_remote_sender of string
-    | Count_remote_final_rcpts of string list
+    | Choose_srs_forward_domain of string list
     | SRS_secrets_request
 
   type response
     = Configuration of Config.t
     | Remote_sender_check of bool
-    | Remote_final_rcpt_counts of (string * int) list
+    | SRS_forward_domain of string option
     | SRS_secrets of (string * string list)
 end
 
@@ -25,28 +25,28 @@ module Slave_ops = struct
   let string_of_request = function
     | Configuration_request -> "a"
     | Check_remote_sender s -> sprintf "b:%s" s
-    | Count_remote_final_rcpts rs -> sprintf "c:%s" (Marshal.to_string rs [])
+    | Choose_srs_forward_domain rs -> sprintf "c:%s" (Marshal.to_string rs [])
     | SRS_secrets_request -> "d"
 
   let request_of_string s =
     match s.[0] with
     | 'a' -> Configuration_request
     | 'b' -> Check_remote_sender (payload s)
-    | 'c' -> Count_remote_final_rcpts (Marshal.from_string (payload s) 0)
+    | 'c' -> Choose_srs_forward_domain (Marshal.from_string (payload s) 0)
     | 'd' -> SRS_secrets_request
     | other -> failwith (sprintf "unexpected request: '%c'" other)
 
   let string_of_response = function
     | Configuration c -> sprintf "A:%s" (Config.serialize c)
     | Remote_sender_check b -> sprintf "B:%s" (string_of_bool b)
-    | Remote_final_rcpt_counts rs -> sprintf "C:%s" (Marshal.to_string rs [])
+    | SRS_forward_domain d -> sprintf "C:%s" (Marshal.to_string d [])
     | SRS_secrets ss -> sprintf "D:%s" (Milter_srs.serialize_secrets ss)
 
   let response_of_string s =
     match s.[0] with
     | 'A' -> Configuration (Config.unserialize (payload s))
     | 'B' -> Remote_sender_check (bool_of_string (payload s))
-    | 'C' -> Remote_final_rcpt_counts (Marshal.from_string s 2)
+    | 'C' -> SRS_forward_domain (Marshal.from_string s 2)
     | 'D' -> SRS_secrets (Milter_srs.unserialize_secrets (payload s))
     | other -> failwith (sprintf "unexpected response = '%c'" other)
 end

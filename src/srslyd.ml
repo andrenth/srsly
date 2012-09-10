@@ -52,10 +52,10 @@ let slave_ipc_handler fd =
         lwt () = debug "proxymap remote sender check for '%s'" s in
         lwt r = Proxymap.is_remote_sender s in
         return (Remote_sender_check r)
-    | Count_remote_final_rcpts rcpts ->
+    | Choose_srs_forward_domain rcpts ->
         lwt () = debug "proxymap final destination count request" in
-        lwt dests = Proxymap.count_remote_final_rcpts rcpts in
-        return (Remote_final_rcpt_counts dests)
+        lwt fwd = Proxymap.choose_forward_domain rcpts in
+        return (SRS_forward_domain fwd)
     | SRS_secrets_request ->
         lwt () = info "sending SRS secrets to slave" in
         lwt secrets = Srs_util.read_srs_secrets () in

@@ -44,8 +44,8 @@ module StepSet = SetOfList.Make(struct
 end)
 
 type ops =
-  { is_remote_sender         : (string -> bool Lwt.t)
-  ; remote_final_rcpt_counts : (string list -> (string * int) list Lwt.t)
+  { is_remote_sender      : (string -> bool Lwt.t)
+  ; choose_forward_domain : (string list -> string option Lwt.t)
   }
 
 let proxymap_ops = ref None
@@ -56,12 +56,12 @@ let init ops =
 let is_remote_sender sender =
   let run ops =
     Lwt_preemptive.run_in_main (fun () -> ops.is_remote_sender sender) in
-  O.may_default false run !proxymap_ops
+  run (O.some !proxymap_ops)
 
-let remote_final_rcpt_counts rcpts =
+let choose_forward_domain rcpts =
   let run ops =
-    Lwt_preemptive.run_in_main (fun () -> ops.remote_final_rcpt_counts rcpts) in
-  O.may_default [] run !proxymap_ops
+    Lwt_preemptive.run_in_main (fun () -> ops.choose_forward_domain rcpts) in
+  run (O.some !proxymap_ops)
 
 let spf = SPF.server SPF.Dns_cache
 
@@ -210,31 +210,8 @@ let add_spf_header ctx priv resp = function
       let ar = authentication_results ctx priv resp in
       milter_add_header ctx ("Authentication-Results", ar)
 
-let weighted_sample a =
-  let tot = float_of_int (Array.fold_left (fun s (_, c) -> s + c) 0 a) in
-  let r = tot *. (1.0 -. Random.float 1.0) in
-  let rec sample i s =
-    if s >= r then
-      fst a.(i-1)
-    else
-      sample (i+1) (s +. float_of_int (snd a.(i))) in
-  sample 0 0.0
-
-(*
- * We choose a random domain to be used as the SRS forward domain.
- * This is done because there's no way to associate each of the original
- * recipients to the final addresses after virtual alias translation
- * is done.
- *)
-let choose_forward_domain rcpts =
-  let arr = Array.of_list rcpts in
-  let rcpt = weighted_sample arr in
-  let at = String.index rcpt '@' in
-  String.sub rcpt (at+1) (String.length rcpt - at - 1)
-
-let srs_forward ctx from remote_rcpt_counts =
+let srs_forward ctx from fwd =
   let srs = Milter_srs.current () in
-  let fwd = choose_forward_domain remote_rcpt_counts in
   debug "randomly chosen SRS forward domain for '%s': '%s'" from fwd;
   let srs_from = SRS.forward srs from fwd in
   info "SRS-forwarding %s as %s" from srs_from;
@@ -307,9 +284,9 @@ let eom ctx =
       (if priv.is_bounce then
         reverse_srs_signed_rcpts ctx rcpts
       else if is_remote_sender from then
-        let counts = remote_final_rcpt_counts rcpts in
-        if counts <> [] then
-          srs_forward ctx from counts);
+        match choose_forward_domain rcpts with
+        | None -> ()
+        | Some fwd -> srs_forward ctx from fwd);
       match priv.result with
       | Whitelisted ((_, msg) as header) ->
           info "Whitelisted address: %s" msg;

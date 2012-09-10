@@ -57,19 +57,18 @@ let proxymap_is_remote_sender fd =
   (fun sender ->
     Ipc.Slave.make_request fd (Check_remote_sender sender) handle_ipc)
 
-let proxymap_remote_final_rcpt_counts fd =
+let proxymap_choose_forward_domain fd =
   let handle_ipc = function
-    | `Response (Remote_final_rcpt_counts c) ->
-        lwt () =
-          debug "received proxymap final destination counts: %s"
-            (join_counts c) in
-        return c
+    | `Response (SRS_forward_domain d) ->
+        lwt () = debug "received proxymap SRS forward domain: %s"
+          (match d with None -> "none" | Some x -> x) in
+        return d
     | `EOF | `Timeout as e ->
         ipc_error e
     | _ ->
-        fail_lwt "unexpected response while waiting for final rcpt counts" in
+        fail_lwt "unexpected response while waiting for SRS forward domain" in
   (fun rcpts ->
-    Ipc.Slave.make_request fd (Count_remote_final_rcpts rcpts) handle_ipc)
+    Ipc.Slave.make_request fd (Choose_srs_forward_domain rcpts) handle_ipc)
 
 let handle_sighup fd _ =
   Lwt.async
@@ -111,8 +110,8 @@ let main fd =
   lwt () = read_srs_secrets fd in
   let module C = Milter_callbacks in
   let callback_ops =
-    { C.remote_final_rcpt_counts = proxymap_remote_final_rcpt_counts fd
-    ; C.is_remote_sender         = proxymap_is_remote_sender fd
+    { C.choose_forward_domain = proxymap_choose_forward_domain fd
+    ; C.is_remote_sender      = proxymap_is_remote_sender fd
     } in
   C.init callback_ops;
   Milter.setdbg (Config.milter_debug_level ());

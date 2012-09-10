@@ -276,13 +276,18 @@ queries for recipient lookups. Defaults to 20.
 .I sender_query_max_results (integer)
 Specifies the maximum number of results returned from
 .I proxymap
-queries for sender lookups. Defaults to 1.
+queries for sender lookups. Defaults to 1.  While it is possible to set this
+limit to a different number, be careful with what this means in your MTA
+configuration.  Having a sender address translate to multiple addresses is
+unusual at best.
 
 .TP
 .I recipient_query_max_results (integer)
 Specifies the maximum number of results returned from
 .I proxymap
-queries for recipient lookups. Defaults to 100.
+queries for recipient lookups. This is the per-recipient limit, so the total
+allowed number of results corresponds to this number multiplied by the number
+of RCPT TO addresses of the message.  Defaults to 100.
 
 .TP
 .I result_format (string)

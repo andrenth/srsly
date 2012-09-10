@@ -1,6 +1,6 @@
 type ops =
-  { is_remote_sender         : (string -> bool Lwt.t)
-  ; remote_final_rcpt_counts : (string list -> (string * int) list Lwt.t)
+  { is_remote_sender      : (string -> bool Lwt.t)
+  ; choose_forward_domain : (string list -> string option Lwt.t)
   }
 
 val init : ops -> unit
