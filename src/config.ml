@@ -423,7 +423,7 @@ let proxymap_recipient_query_max_depth () =
   (current ()).proxymap.rcpt_query_max_depth
 
 let proxymap_sender_query_max_results () =
-  (current ()).proxymap.sender_query_max_depth
+  (current ()).proxymap.sender_query_max_results
 
 let proxymap_recipient_query_max_results () =
   (current ()).proxymap.rcpt_query_max_results
