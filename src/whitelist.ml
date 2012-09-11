@@ -1,6 +1,6 @@
 open Util
 
-module O = Release_option
+module O = Release_util.Option
 
 let check_networks networks msg addr =
   let rec check = function

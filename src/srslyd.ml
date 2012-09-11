@@ -6,7 +6,7 @@ open Ipc.Slave_types
 open Log_lwt
 open Util
 
-module O = Release_option
+module O = Release_util.Option
 
 let slave_connections = ref (fun () -> [])
 

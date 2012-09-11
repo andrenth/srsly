@@ -6,7 +6,7 @@ open Release_config_validations
 open Log_lwt
 open Util
 
-module O = Release_option
+module O = Release_util.Option
 
 type srslyd_config =
   { lock_file      : Lwt_io.file_name

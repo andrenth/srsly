@@ -1,6 +1,6 @@
 open Printf
 
-module O = Release_option
+module O = Release_util.Option
 
 module Slave_types = struct
   type request

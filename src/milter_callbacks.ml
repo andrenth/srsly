@@ -4,7 +4,7 @@ open Printf
 open Log_preemptive
 open Util
 
-module O = Release_option
+module O = Release_util.Option
 
 type result
   = No_result

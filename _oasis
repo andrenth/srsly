@@ -56,7 +56,7 @@ Executable "srsly"
                    milter,
                    release,
                    release.config,
-                   release.option,
+                   release.util,
                    spf,
                    srs,
                    str,

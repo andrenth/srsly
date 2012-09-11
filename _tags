@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 3047f3a4fe4e6edca78ce23d4de9735b)
+# DO NOT EDIT (digest: c17bae406866631c88f1ab81e8aa3cf5)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -48,7 +48,7 @@
 <src/srsly.{native,byte}>: pkg_milter
 <src/srsly.{native,byte}>: pkg_release
 <src/srsly.{native,byte}>: pkg_release.config
-<src/srsly.{native,byte}>: pkg_release.option
+<src/srsly.{native,byte}>: pkg_release.util
 <src/srsly.{native,byte}>: pkg_spf
 <src/srsly.{native,byte}>: pkg_srs
 <src/srsly.{native,byte}>: pkg_str
@@ -62,7 +62,7 @@
 <src/*.ml{,i}>: pkg_milter
 <src/*.ml{,i}>: pkg_release
 <src/*.ml{,i}>: pkg_release.config
-<src/*.ml{,i}>: pkg_release.option
+<src/*.ml{,i}>: pkg_release.util
 <src/*.ml{,i}>: pkg_spf
 <src/*.ml{,i}>: pkg_srs
 <src/*.ml{,i}>: pkg_str
