@@ -247,7 +247,8 @@ let envfrom ctx from args =
     (fun priv ->
       match priv.helo with
       | None ->
-          notice "remote didn't say HELO, rejecting message";
+          let addr = Unix.string_of_inet_addr priv.addr in
+          notice "remote %s didn't say HELO, rejecting message" addr;
           Milter.setreply ctx "503" (Some "5.0.0") (Some "Please say HELO");
           priv, Milter.Reject
       | Some _ ->
