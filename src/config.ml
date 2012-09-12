@@ -341,8 +341,11 @@ let load file =
           err "%s" e
     else
       err "%s: not a regular file" file
-  with Unix.Unix_error (e, _, _) ->
-    err "%s: %s" file (Unix.error_message e)
+  with
+  | Unix.Unix_error (e, _, _) ->
+      err "%s: %s" file (Unix.error_message e)
+  | Network.Network_error e ->
+      err "%s: %s" file e
 
 let load_defaults () =
   configuration := Some (make (Release_config.defaults spec));

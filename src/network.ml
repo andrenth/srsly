@@ -1,23 +1,26 @@
-open Printf
-
 type t = Unix.inet_addr * int
 
+exception Network_error of string
+
 let make prefix len =
-  let prefix' = Unix.inet_addr_of_string prefix in
   let maxlen =
-    match String.length ((Obj.magic prefix') : string) with
-    | 4 -> 32
-    | 16 -> 128
-    | _ -> invalid_arg "Network.of_string" in
+    try
+      let prefix' = Unix.inet_addr_of_string prefix in
+      match String.length ((Obj.magic prefix') : string) with
+      | 4 -> 32
+      | 16 -> 128
+      | _ -> raise (Network_error ("unexpected invalid prefix: " ^ prefix))
+    with _ ->
+      raise (Network_error ("invalid prefix: " ^ prefix)) in
   if len < 0 || len > maxlen then
-    invalid_arg "Network.make";
+    raise (Network_error ("invalid prefix length: " ^ string_of_int len));
     (Unix.inet_addr_of_string prefix, len)
 
 let of_string s =
   match Str.split (Str.regexp "\\/") s with
   | [prefix; len] -> make prefix (int_of_string len)
   | [addr] -> make addr (if String.contains addr ':' then 128 else 32)
-  | _ -> invalid_arg "Network.of_string"
+  | _ -> raise (Network_error ("invalid network: " ^ s))
 
 let ipv4_mask = Uint32.of_int (-1)
 let ipv6_mask = Uint128.of_int (-1)
