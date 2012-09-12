@@ -2,18 +2,21 @@ open Printf
 
 type t = Unix.inet_addr * int
 
+let make prefix len =
+  let prefix' = Unix.inet_addr_of_string prefix in
+  let maxlen =
+    match String.length ((Obj.magic prefix') : string) with
+    | 4 -> 32
+    | 16 -> 128
+    | _ -> invalid_arg "Network.of_string" in
+  if len < 0 || len > maxlen then
+    invalid_arg "Network.make";
+    (Unix.inet_addr_of_string prefix, len)
+
 let of_string s =
   match Str.split (Str.regexp "\\/") s with
-  | [prefix; len] ->
-      let prefix' = Unix.inet_addr_of_string prefix in
-      let len = int_of_string len in
-      let maxlen = match String.length ((Obj.magic prefix') : string) with
-      | 4 -> 32
-      | 16 -> 128
-      | _ -> invalid_arg "Network.of_string" in
-      if len < 0 || len > maxlen then
-        invalid_arg "Network.of_string";
-      (Unix.inet_addr_of_string prefix, len)
+  | [prefix; len] -> make prefix (int_of_string len)
+  | [addr] -> make addr (if String.contains addr ':' then 128 else 32)
   | _ -> invalid_arg "Network.of_string"
 
 let ipv4_mask = Uint32.of_int (-1)
