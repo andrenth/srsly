@@ -91,11 +91,11 @@ sender and evelope recipient are not local to the SMTP server.
 While this is a simple decision in principle, things are not that easy in
 practice. One of the difficulties of testing whether a given address is local
 or remote from the point of view of the SMTP server is that Postfix supports a
-large number of different databases that can be used queries in order to
-perform address translations. Those include text files, regular expression
-tables, and SQL and LDAP queries, among others. Therefore, in order to provide
-a solution that works on every possible Postfix configuration, one would be
-forced to implement different connectors for each of the databases supported by
+large number of different databases that can be queried in order to perform
+address translations. Those include text files, regular expression tables, and
+SQL and LDAP queries, among others. Therefore, in order to provide a solution
+that works on every possible Postfix configuration, one would be forced to
+implement different connectors for each of the databases supported by
 Postfix.
 
 The approach taken by srsly is more pragmatic, if not officially supported by
