@@ -236,10 +236,10 @@ let connect ctx host addr =
   Milter.Continue
 
 let helo ctx helo =
-  debug "helo callback: helo=%s" (O.default "?" helo);
+  debug "helo callback: helo=%s" helo;
   with_priv_data Milter.Tempfail ctx
     (fun priv ->
-      { priv with helo = helo}, Milter.Continue)
+      { priv with helo = Some helo}, Milter.Continue)
 
 let envfrom ctx from args =
   debug "envfrom callback: from=%s" from;

@@ -5,7 +5,7 @@ type ops =
 
 val init : ops -> unit
 val connect : Milter.ctx -> string option -> Unix.sockaddr option -> Milter.stat
-val helo : Milter.ctx -> string option -> Milter.stat
+val helo : Milter.ctx -> string -> Milter.stat
 val envfrom : Milter.ctx -> string -> string list -> Milter.stat
 val envrcpt : Milter.ctx -> string -> string list -> Milter.stat
 val eom : Milter.ctx -> Milter.stat
