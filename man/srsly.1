@@ -1,0 +1,55 @@
+.TH srsly 1 "srsly"
+.SH NAME
+.B srsly
+\ - \fIsrslyd(8)\fR control program.
+
+.SH SYNOPSIS
+\fBsrslyd\fR \fIcommand\fR [\fIconfig_file\fR]
+
+.SH DESCRIPTION
+\fBsrsly\fR is a control command for the \fIsrslyd(8)\fR daemon.  It sends
+commands via a UNIX socket whose path is defined in \fIsrslyd.conf(5)\fR.
+The following actions are currently supported.
+
+.IP \fBstart\fR 16
+starts the srsly daemon.
+.IP \fBstop\fR
+stops the srsly daemon.
+.IP \fBreload\fR
+tells \fIsrslyd(8)\fR to re-read its configuration file.
+.IP \fBrestart\fR
+is equivalent to \fIstop\fR followed by \fIstart\fR.
+.IP \fBnew-secret\fR
+generates a new random SRS secret and outputs it to \fIstdout\fR.
+.IP \fBreplace-secret\fR
+replaces the current SRS secret by a new one.  The old secret is moved to a
+different directory and will still be used when trying to SRS-reverse a
+MAIL FROM address (see the \fIsecret_file\fR and \fIsecret_directory\fR
+directives in \fIsrslyd.conf(5)\fR).
+.IP \fBexpire\fR
+removes expired SRS secrets from the configured \fIsecret_directory\fR.
+Expired secrets are those whose files in \fIsecret_directory\fR have been
+modified by more than \fIhash_max_age\fR days ago.  See \fIsrslyd.conf(5)\fR
+for details no these configuration directives.  This command is usualy run
+from a cron job.
+.RS
+.RE
+
+All commands operate on the configuration file given as a second argument to
+\fBsrsly\fR, which, if not given, defaults to \fI/etc/srsly/srslyd.conf\fR.
+
+.SH FILES
+
+.IP \fI/etc/srsly/srslyd.conf\fR
+Default location of the \fIsrslyd(8)\fR configuration file.
+.IP \fI/etc/srsly/srs_secret\fR
+Default location of the SRS secret file.
+.IP \fI/etc/srsly/srs_secrets.d\fR
+Default location of the SRS old secrets directory.
+
+.SH SEE ALSO
+srslyd.conf(5), srslyd(8)
+
+.SH AUTHOR
+
+srsly was written by Andre Nathan.
