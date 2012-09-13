@@ -126,18 +126,21 @@ let usage rc =
 let main argc argv =
   lwt () = if argc = 1 then usage 1 else return_unit in
   let config = if argc = 2 then "/etc/srsly/srslyd.conf" else argv.(2) in
-  lwt () = Config.load config in
-  set_log_level (Config.srslyd_log_level ());
   match argv.(1) with
-  | "start" -> start config
-  | "stop" ->  stop ()
-  | "reload" -> reload config
-  | "restart" -> restart config
-  | "new-secret" -> new_secret ()
-  | "replace-secret" -> replace_secret ()
-  | "expire" -> expire ()
-  | "help" -> usage 0
-  | _ -> usage 1
+  | "help" ->
+      usage 0
+  | _ ->
+      lwt () = Config.load config in
+      set_log_level (Config.srslyd_log_level ());
+      match argv.(1) with
+      | "start" -> start config
+      | "stop" ->  stop ()
+      | "reload" -> reload config
+      | "restart" -> restart config
+      | "new-secret" -> new_secret ()
+      | "replace-secret" -> replace_secret ()
+      | "expire" -> expire ()
+      | _ -> usage 1
 
 let () =
   if Unix.getuid () <> 0 then begin
