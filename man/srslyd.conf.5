@@ -2,87 +2,74 @@
 
 .SH NAME
 .B srslyd.conf
-\- Configuration file for srslyd(8)
+\- Configuration file for \fIsrslyd(8)\fR
 
 .SH SYNOPSYS
 .B /etc/srsly/srslyd.conf
 
 .SH DESCRIPTION
-.I srslyd(8)
-reads configuration settings from
-.I /etc/srsly/srslyd.conf
-(or the configuration file given as a command-line parameter).  The file
-contains keyword-argument pairs, one per line, organized into sections.
-Blank lines are ignored.  Comments start with `#' and extend until the end of
-the line.
+\fIsrslyd(8)\fR reads configuration settings from \fI/etc/srsly/srslyd.conf\fR
+(or the configuration file given in the command-line).  The file contains
+keyword-argument pairs organized into sections.  Blank lines are ignored.
+Comments start with `#' and extend until the end of the line.
 
 Sections are defined by their name enclosed in square brackets, `[' and `]'.
 A configuration parameter belongs to the section directly above it in the
 configuration file.
 
-Each section is composed of a number of
-.I key = value
-pairs, one per line.  Values can be of one of the following types
+Each section is composed of a number of \fIkey = value\fR pairs.  Values can
+be of one of the following types.
 
 .IP \(bu
-.I booleans,
-represented by the values
-.I true
+\fIbooleans\fR, represented by the values \fItrue\fR and \fIfalse\fR.
+.IP \(bu
+\fIintegers\fR, represented by bare numbers.
+.IP \(bu
+\fIstrings\fR, represented by values enclosed by double quotes, `"'.
+.IP \(bu
+\fIregular expressions\fR, represented by values enclosed by forward slashes,
+`/'.
+.IP \(bu
+\fIlog levels\fR, represented by the usual syslog log levels, that is,
+\fIdebug\fR,
+\fIinfo\fR,
+\fInotice\fR,
+\fIwarning\fR,
+\fIerror\fR,
 and
-.I false.
+\fIfatal\fR.
 .IP \(bu
-.I integers,
-represented by bare numbers.
-.IP \(bu
-.I strings,
-represented by values enclosed by double quotes, `"'.
-.IP \(bu
-.I regular expressions,
-represented by values enclosed by forward slashes, `/'.
-.IP \(bu
-.I log levels,
-represented by the usual
-syslog log levels, that is,
-.I debug,
-.I info,
-.I notice,
-.I warning,
-.I error,
-and
-.I fatal.
-.IP \(bu
-.I lists,
-represented by values of one of the above types, enclosed by square brackets,
-`[' and `]', and separated by commas, `,'.
+\fIlists\fR, represented by values of one of the above types, enclosed by
+square brackets, `[' and `]', and separated by commas, `,'.
 
 .SH SECTIONS
 .SS srslyd
-This section container the parameters of the srslyd(8) daemon itself.
+This section container the parameters of the \fIsrslyd(8)\fR daemon itself.
 
 .TP
-.I lock_file (string)
-Sets the path of the lock file used by srslyd(*).  Defaults to
-"/var/run/srslyd.pid".
+\fIlock_file (string)\fR
+Sets the path of the lock file used by \fIsrslyd(8)\fR.
+Defaults to "/var/run/srslyd.pid".
 
 .TP
-.I control_socket (string)
-Sets the path of the control socket used by srslyd(8).  This socket is used by
-the srsly(1) tool to send commands to the daemon.  Defaults to
-"/var/run/srslyd.sock".
+\fIcontrol_socket (string)\fR
+Sets the path of the control socket used by \fIsrslyd(8)\fR.  This socket is
+used by the \fIsrsly(1)\fR control tool to send commands to the daemon.
+Defaults to "/var/run/srslyd.sock".
 
 .TP
-.I log_level (log level)
-Sets the verbosity level that is used when logging messages from srslyd(8).
-Defaults to notice.
+\fIlog_level (log level)\fR
+Sets the verbosity level that is used when logging messages from
+\fIsrslyd(8)\fR.  Defaults to ``notice''.
 
 .TP
-.I background (boolean)
-Defines if srslyd(8) will become and daemon and run in background.  If set to
-false, log messages will be displayed on stdout instead of sent to syslog.
-Defaults to true.
+\fIbackground (boolean)\fR
+Defines if \fIsrslyd(8)\fR will become and daemon and run in background.
+If set to ``false'', log messages will be displayed on stdout instead of sent
+to syslog.  Defaults to ``true''.
 
 .TP
-.I random_device (string)
+\fIrandom_device (string)\fR
 Sets the character device to be used for random number generation.  Defaults
 to "/dev/urandom".
 
@@ -90,292 +77,279 @@ to "/dev/urandom".
 This section configures milter-related parameters.
 
 .TP
-.I user (string)
-Sets the user that the srsly-milter process created by srslyd(8) will run
-as. The srsly-milter process will chroot to that user's home directory.
+\fIuser (string)\fR
+Sets the user that the srsly-milter process created by \fIsrslyd(8)\fR will run
+as.  The \fIsrsly-milter\fR process will chroot to that user's home directory.
 Defaults to "srsly".
 
 .TP
-.I listen_address (string)
-Defines the listen address for the milter service. This parameter must follow
+\fIlisten_address (string)\fR
+Defines the listen address for the milter service.  This parameter must follow
 the syntax of milter socket specifications, as indicated below.
 .TP
 .IP \(bu
-.I {unix|local}:/path/to/file
+\fI{unix|local}:/path/to/file\fR
 \(em a named pipe.
 .IP \(bu
-.I inet:port@{hostname|ip-address}
+\fIinet:port@{hostname|ip-address}\fR
 \(em an IPV4 socket.
 .IP \(bu
-.I inet6:port@{hostname|ip-address}
+\fIinet6:port@{hostname|ip-address}\fR
 \(em an IPV6 socket.
 
 .TP
-.I debug_level (integer)
+\fIdebug_level (integer)\fR
 Sets the milter debug level.  Must be an integer between 0 and 6.  Defaults to
 0.
 
 .SS proxymap
-This section contains parameters that control how srslyd(8) communicates with
-Postfix via the
-.I proxymap
-socket.
+This section contains parameters that control how \fIsrslyd(8)\fR communicates
+with Postfix via the \fIproxymap\fR socket.
 
 .TP
-.I sender_lookup_table (string)
+\fIsender_lookup_table (string)\fR
 Defines which Postfix lookup table will be used to check if the MAIL FROM
-address is local or remote. Defaults to "hash:/etc/aliases".
+address is local or remote.  Defaults to "hash:/etc/aliases".
 
-Note that
-.I sender_lookup_table
-must be present in the
-.I proxy_read_maps
+Note that \fIsender_lookup_table\fR must be present in the \fIproxy_read_maps\fR
 setting in the Postfix configuration in order for queries to work.
 
 .TP
-.I sender_lookup_key_format (string)
-Defines the key to be used in the
-.I proxymap
-query.
-This format accepts the following format strings, replaced by srslyd(8) when
-the query is created.
+\fIsender_lookup_key_format (string)\fR
+Defines the key to be used in the \fIproxymap\fR query.
+This format accepts the following format strings, replaced by \fIsrslyd(8)\fR
+when the query is created.
 .IP \(bu
-.I {a}
+\fI{a}\fR
 \(em the whole email address.
 .IP \(bu
-.I {d}
+\fI{d}\fR
 \(em the domain of the email address.
 .IP \(bu
-.I {u}
+\fI{u}\fR
 \(em the user (local-part) of the email address.
 
 Defaults to "{a}".
 
 .TP
-.I local_sender_regexp (regular expression)
+\fIlocal_sender_regexp (regular expression)\fR
 Sets the regular expression used to match against the result of the sender
 address query.  If none of the results match the given regular expression,
 the sender is considered to be remote.
 
 .TP
-.I recipient_lookup_table (string)
+\fIrecipient_lookup_table (string)\fR
 This parameter is analogous to
-.I sender_lookup_table,
-but used for recipient address queries. Defaults to "hash:/etc/aliases".
+\fIsender_lookup_table\fR,
+but used for recipient address queries.  Defaults to "hash:/etc/aliases".
 
 .TP
-.I recipient_lookup_key_format (string)
+\fIrecipient_lookup_key_format (string)\fR
 This setting is analogous to
-.I sender_lookup_key_format,
-but used to build the recipient query key. Defaults to "{a}".
+\fIsender_lookup_key_format\fR,
+but used to build the recipient query key.  Defaults to "{a}".
 
 .TP
-.I local_recipient_regexp (regular expression)
+\fIlocal_recipient_regexp (regular expression)\fR
 Analogous to
-.I local_recipient_regexp
+\fIlocal_recipient_regexp\fR
 but used to decide if recipients are local or remote.
 
 .TP
-.I query_format (string)
-Configures the format of the query string sent to postfix. This pattern may
-contain the following format strings, which are replaced by srslyd(8) when the
-query is created:
+\fIquery_format (string)\fR
+Configures the format of the query string sent to postfix.  This pattern may
+contain the following format strings, which are replaced by \fIsrslyd(8)\fR
+when the query is created:
 .IP \(bu
-.I {f}
+\fI{f}\fR
 \(em the query flags.
 .IP \(bu
-.I {k}
+\fI{k}\fR
 \(em the query key.
 .IP \(bu
-.I {t}
+\fI{t}\fR
 \(em the lookup table name.
 
 Defaults to "request\\000lookup\\000table\\000{t}\\000flags\\000{f}\\000key\\000{k}\\000\\000"
 
 .TP
-.I query_flags (integer)
+\fIquery_flags (integer)\fR
 This parameter represents the result of the bitwise logical or of the Postfix
-query flags. As of Postfix 2.9.4, these are:
+query flags.  As of Postfix 2.9.4, these are:
 .IP \(bu
-.I DICT_FLAG_NONE
+\fIDICT_FLAG_NONE\fR
 (0)
 .IP \(bu
-.I DICT_FLAG_DUP_WARN
+\fIDICT_FLAG_DUP_WARN\fR
 (1<<0)
 .IP \(bu
-.I DICT_FLAG_DUP_IGNORE
+\fIDICT_FLAG_DUP_IGNORE\fR
 (1<<1)
 .IP \(bu
-.I DICT_FLAG_TRY0NULL
+\fIDICT_FLAG_TRY0NULL\fR
 (1<<2)
 .IP \(bu
-.I DICT_FLAG_TRY1NULL
+\fIDICT_FLAG_TRY1NULL\fR
 (1<<3)
 .IP \(bu
-.I DICT_FLAG_FIXED
+\fIDICT_FLAG_FIXED\fR
 (1<<4)
 .IP \(bu
-.I DICT_FLAG_PATTERN
+\fIDICT_FLAG_PATTERN\fR
 (1<<5)
 .IP \(bu
-.I DICT_FLAG_LOCK
+\fIDICT_FLAG_LOCK\fR
 (1<<6)
 .IP \(bu
-.I DICT_FLAG_DUP_REPLACE
+\fIDICT_FLAG_DUP_REPLACE\fR
 (1<<7)
 .IP \(bu
-.I DICT_FLAG_SYNC_UPDATE
+\fIDICT_FLAG_SYNC_UPDATE\fR
 (1<<8)
 .IP \(bu
-.I DICT_FLAG_DEBUG
+\fIDICT_FLAG_DEBUG\fR
 (1<<9)
 .IP \(bu
-.I DICT_FLAG_NO_REGSUB
+\fIDICT_FLAG_NO_REGSUB\fR
 (1<<11)
 .IP \(bu
-.I DICT_FLAG_NO_PROXY
+\fIDICT_FLAG_NO_PROXY\fR
 (1<<12)
 .IP \(bu
-.I DICT_FLAG_NO_UNAUTH
+\fIDICT_FLAG_NO_UNAUTH\fR
 (1<<13)
 .IP \(bu
-.I DICT_FLAG_FOLD_FIX
+\fIDICT_FLAG_FOLD_FIX\fR
 (1<<14)
 .IP \(bu
-.I DICT_FLAG_FOLD_MUL
+\fIDICT_FLAG_FOLD_MUL\fR
 (1<<15)
 .IP \(bu
-.I DICT_FLAG_FOLD_ANY
+\fIDICT_FLAG_FOLD_ANY\fR
 (DICT_FLAG_FOLD_FIX|DICT_FLAG_FOLD_MUL)
 .IP \(bu
-.I DICT_FLAG_OPEN_LOCK
+\fIDICT_FLAG_OPEN_LOCK\fR
 (1<<16)
 
 The default value is 16448, which corresponds to
 (DICT_FLAG_LOCK | DICT_FLAG_FOLD_FIX).
 
 .TP
-.I query_socket (string)
-The location of the
-.I proxymap
-socket on the file system. Defaults to "/var/spool/postfix/private/proxymap".
+\fIquery_socket (string)\fR
+The location of the \fIproxymap\fR socket on the file system.  Defaults to
+"/var/spool/postfix/private/proxymap".
 
 .TP
-.I sender_query_max_depth (integer)
-Specifies the maximum recursion depth on
-.I proxymap
-queries for sender lookups. Defaults to 1.
+\fIsender_query_max_depth (integer)\fR
+Specifies the maximum recursion depth on \fIproxymap\fR queries for sender
+lookups.  Defaults to 1, as a chain of redirections is not expected for sender
+address resolution.
 
 .TP
-.I recipient_query_max_depth (integer)
-Specifies the maximum recursion depth on
-.I proxymap
-queries for recipient lookups. Defaults to 20.
+\fIrecipient_query_max_depth (integer)\fR
+Specifies the maximum recursion depth on \fIproxymap\fR queries for recipient
+lookups.  Defaults to 20.
 
 .TP
-.I sender_query_max_results (integer)
-Specifies the maximum number of results returned from
-.I proxymap
-queries for sender lookups. Defaults to 1.  While it is possible to set this
+\fIsender_query_max_results (integer)\fR
+Specifies the maximum number of results returned from \fIproxymap\fR
+queries for sender lookups.  Defaults to 1.  While it is possible to set this
 limit to a different number, be careful with what this means in your MTA
 configuration.  Having a sender address translate to multiple addresses is
 unusual at best.
 
 .TP
-.I recipient_query_max_results (integer)
-Specifies the maximum number of results returned from
-.I proxymap
-queries for recipient lookups. This is the per-recipient limit, so the total
-allowed number of results corresponds to this number multiplied by the number
+\fIrecipient_query_max_results (integer)\fR
+Specifies the maximum number of results returned from \fIproxymap\fR queries
+for recipient lookups.  This is the per-recipient limit, so the total allowed
+number of results corresponds to this number multiplied by the number
 of RCPT TO addresses of the message.  Defaults to 100.
 
 .TP
-.I result_format (string)
-Defines the format of the response sent by
-.I proxymap.
-This pattern may contain the following format strings.
+\fIresult_format (string)\fR
+Defines the format of the response sent by \fIproxymap\fR.  This pattern may
+contain the following format strings.
 .IP \(bu
-.I {s}
+\fI{s}\fR
 \(em the result status code.
 .IP \(bu
-.I {v}
+\fI{v}\fR
 \(em the result value.
 
 Defaults to "status\\000{s}\\000value\\000{v}\\000\\000".
 
 .TP \(bu
-.I result_value_separator (regular expression)
+\fIresult_value_separator (regular expression)\fR
 Defines the separator to be used when parsing multiple values in the
-.I proxymap
-result. Defaults to /, */, that is, a comma optionally followed by any number
-of spaces.
+\fIproxymap\fR result.  Defaults to /, */, that is, a comma optionally
+followed by any number of spaces.
 
 .SS spf
 This section contains SPF-specific parameters.
 
 .TP
-.I fail_on_helo_temperror (boolean)
+\fIfail_on_helo_temperror (boolean)\fR
 Defines whether a DNS temporary error condition will result in an SPF error
 response.  Defaults to true.
 
 .TP
-.I local_whitelist (string list)
+\fIlocal_whitelist (string list)\fR
 Defines a list of local IP addresses for which SPF verification will not be run.
 Defaults to ["127.0.0.0/8", "::ffff:127.0.0.0/104"].
 
 .TP
-.I relay_whitelist (string list)
+\fIrelay_whitelist (string list)\fR
 Defines a list of IP addresses of trusted relays for which SPF verification
 will be skipped.  Defaults to [].
 
 .TP
-.I result_headers (string list)
+\fIresult_headers (string list)\fR
 Defines which SPF result headers will be added to the message by srsly after
 SPF verification.  This can be either "Authentication-Results", the older
 "Received-SPF" or both.  Defaults to ["Authentication-Results"].
 
 .SS srs
-This section defines the SRS settings used by srslyd(8).
+This section defines the SRS settings used by \fIsrslyd(8)\fR.
 
 .TP
-.I secret_file (string)
-Configures the path where srslyd(8) will read the secret used to generate
+\fIsecret_file (string)\fR
+Configures the path where \fIsrslyd(8)\fR will read the secret used to generate
 and SRS-rewritten addresses.  Only the first line of the file will be read;
 the rest will be ignored.  Defaults to "/etc/srsly/srs_secret".
 
 .TP
-.I secrets_directory (string)
-Configured the directory whose files srslyd(8) will read old SRS secrets from.
-Replaced SRS secrets are kept in this directory so that they can be used to
-reverse SRS-signed addresses in bounce messages.  Please see srsly(1) for
-details on changing the SRS secret.  This parameter defaults to
-"/etc/srsly/srs_secrets.d".
+\fIsecrets_directory (string)\fR
+Configured the directory whose files \fIsrslyd(8)\fR will read old SRS secrets
+from.  Replaced SRS secrets are kept in this directory so that they can be
+used to reverse SRS-signed addresses in bounce messages.  Please see
+\fIsrsly(1)\fR for details on replacing the SRS secret.  This parameter
+defaults to "/etc/srsly/srs_secrets.d".
 
 .TP
-.I secret_length (integer)
-Defines the length of the random secrets generated by the srsly(1) command.
-Defaults to 8.
+\fIsecret_length (integer)\fR
+Defines the length of the random secrets generated by the \fIsrsly(1)\fR
+command.  Defaults to 8.
 
 .TP
-.I hash_max_age (integer)
+\fIhash_max_age (integer)\fR
 Defines the maximum age of the SRS hash, in days.  Defaults to 8.
 
 .TP
-.I hash_length (integer)
+\fIhash_length (integer)\fR
 Defines the length SRS hash, in days.  Defaults to 8.
 
 .TP
-.I separator (string)
+\fIseparator (string)\fR
 Defines the SRS separator character.  Valid separators are `=', `+' and `-'.
 Defaults to `='.
 
 .SH FILES
 
 .TP
-.I /etc/srsly/srslyd.conf
+\fI/etc/srsly/srslyd.conf\fR
 Default location for this file.
 .TP
-.I /etc/srsly/srs_secrets
+\fI/etc/srsly/srs_secrets\fR
 Default location of the SRS secrets file.
 
 .SH SEE ALSO

@@ -3,44 +3,26 @@
 .B srslyd
 \ - SPF verification daemon with SRS support
 .SH SYNOPSIS
-.B srslyd
-[configfile]
+\fBsrslyd\fR [\fIconfig_file\fR]
 .SH DESCRIPTION
-.B srslyd
-is a
-.I milter
-application that implements
-.B SPF
-verifications and
-.B SRS
-address rewriting on redirects.
+\fBsrslyd\fR is a \fImilter\fR application that implements \fBSPF\fR
+verifications and \fBSRS\fR address rewriting on email redirects.
 
 .SH ARCHITECTURE
 
-.B srslyd
-runs in a master-slave process setup.  Most of the work performed by srsly is
-done by the slave process, also referred to as the milter process and called
-.I srsly-milter
-by default.
+\fBsrslyd\fR runs in a master-slave process setup.  Most of the work performed
+by srsly is done by the slave process, also referred to as the milter process
+and called \fIsrsly-milter\fR by default.
 
-Upon startup,
-.B srslyd
-will become a daemon and fork a child process,
-.I srsly-milter,
-which will chroot to a pre-configured directory and then drop privileges to a
-non-root user specified in the configuration file.  By default, the
-unprivileged user is called
-.I srsly
-and the chroot directory is that user's home directory.  See
-.I srslyd.conf(5)
-for details on these and other configuration directives.  It will then become
+Upon startup, \fBsrslyd\fR will become a daemon and fork a child process,
+\fIsrsly-milter,\fR which will chroot to a pre-configured directory and then
+drop privileges to a non-root user specified in the configuration file.  By
+default, the unprivileged user is called \fIsrsly\fR and the chroot directory
+is that user's home directory.  See \fIsrslyd.conf(5)\fR for details on these
+and other configuration directives.  The child process will then become
 responsible for handling communication with the SMTP server via the milter
-library.  By default,
-.I srsly-milter
-listens for connections on the
-.I localhost
-address on port
-.I 8387.
+library.  By default, \fIsrsly-milter\fR listens for connections on the
+\fIlocalhost\fR address on port \fI8387.\fR
 Master and slave processes are connected via a UNIX socket that
 is used for inter-process communication.
 
@@ -51,46 +33,39 @@ actions that the milter process cannot perform:
 .IP \(bu
 Reload the configuration file and send the new settings to the slave;
 .IP \(bu
-Read the SRS secret file (see
-.I srslyd.conf(5)
-for details) and send the secret to the milter process;
+Read the SRS secret file (see \fIsrslyd.conf(5)\fR for details) and send the
+secret to the milter process;
 .IP \(bu
 Query Postfix's address maps to determine whether a message's MAIL FROM address
 needs to be rewritten by SRS.  This requires access to Postfix's own UNIX
 sockets and therefore cannot be done from within the milter process chroot
-jail. Therefore, the master process acts as a proxy for Postfix queries.  See
+jail.  Therefore, the master process acts as a proxy for Postfix queries.  See
 COMMUNICATION WITH POSTFIX for more information.
 
 .SH OPERATION
 
-.B srslyd
-is controlled by the
-.I srsly(1)
-command, which allows the daemon to be started, stopped and reloaded, among
-other options.  See the man page for more details.
+\fBsrslyd\fR is controlled by the \fIsrsly(1)\fR command, which allows the
+daemon to be started, stopped and reloaded, among other options.  See the man
+page for more details.
 
-The
-.I srsly-milter
-process runs chrooted into an unprivileged user's home directory, which must be
-prepared for use before the daemon can be started.  Once the user is created,
-its home directory must be populated with the files below.  Here it is assumed
-that the unprivileged user is
-.I srsly
-and that its home directory is
-.I /var/lib/srsly.
+The \fIsrsly-milter\fR process runs chrooted into an unprivileged user's home
+directory, which must be prepared for use before the daemon can be started.
+Once the user is created, its home directory must be populated with the files
+below.  Here it is assumed that the unprivileged user is \fIsrsly\fR and that
+its home directory is \fI/var/lib/srsly.\fR
 
 .IP \(bu
-.I /var/lib/srsly/dev/log
+\fI/var/lib/srsly/dev/log\fR
 .IP \(bu
-.I /var/lib/srsly/etc/hosts
+\fI/var/lib/srsly/etc/hosts\fR
 .IP \(bu
-.I /var/lib/srsly/etc/resolv.conf
+\fI/var/lib/srsly/etc/resolv.conf\fR
 .IP \(bu
-.I /var/lib/srsly/lib/libgcc_s.so.1
+\fI/var/lib/srsly/lib/libgcc_s.so.1\fR
 .IP \(bu
-.I /var/lib/srsly/lib/libnss_dns*.so
+\fI/var/lib/srsly/lib/libnss_dns*.so\fR
 .IP \(bu
-.I /var/lib/srsly/lib/libresolv*.so
+\fI/var/lib/srsly/lib/libresolv*.so\fR
 .RS
 .RE
 
@@ -99,49 +74,32 @@ directory or mirrored there by some OS-specific mechanism such as bind mounts,
 available on Linux.
 
 To make Postfix query srsly when processing a message, simply add
-.I inet:localhost:8387
-to the
-.I smtpd_milters
-variable in the appropriate
-.I smtpd
-instances in your configuration, and reload Postfix.
+\fIinet:localhost:8387\fR to the \fIsmtpd_milters\fR variable in the
+appropriate \fIsmtpd\fR instances in your configuration, and reload Postfix.
 
 .SH COMMUNICATION WITH POSTFIX
 
 In order to decide if the MAIL FROM address needs to be rewritten, srsly needs
-to determine if a message is a redirect. The criteria used by to take that
+to determine if a message is a redirect.  The criteria used by to take that
 decision is the following: a redirect message is one in which both the envelope
 sender and evelope recipient are not local to the SMTP server.
 
-To make that decision,
-.B srslyd
-will connect to Postfix's
-.I proxymap
+To make that decision, \fBsrslyd\fR will connect to Postfix's \fIproxymap\fR
 socket and query Postfix's databases using its internal communication
-protocol.  So, in order to test if an email address is local,
-.B srslyd
+protocol.  So, in order to test if an email address is local, \fBsrslyd\fR
 will recursively send queries via that socket until a final destination is
 reached.  If that final destination matches a regular expression defined in
-.I srslyd.conf(5),
-the address will be considered local.
+\fIsrslyd.conf(5),\fR the address will be considered local.
 
-While the
-.I proxymap
-query protocol is well documented,
-.B srslyd
-understands a number
-of configuration directives in the
-.I proxymap
-section of its configuration file, namely
-.I query_format, query_flags, query_socket, result_format
-and
-.I result_value_separator
-that allows one to change the way queries are made and results are parsed.
-This provides some flexibility against possible changes in the query protocol,
-allowing srsly to adapt without changes to its source code.
-Please refer to
-.I srslyd.conf(5)
-for details on the above configuration directives.
+While the \fIproxymap\fR query protocol is well documented and unlikely to
+change, \fBsrslyd\fR understands a number of configuration directives in the
+\fIproxymap\fR section of its configuration file, namely
+\fIquery_format\fR, \fIquery_flags\fR, \fIquery_socket\fR, \fIresult_format\fR
+and \fIresult_value_separator\fR that allow one to change the way queries are
+made and results are parsed.  This provides some flexibility against possible
+changes in the query protocol, allowing srsly to adapt without changes to its
+source code.  Please refer to \fIsrslyd.conf(5)\fR for details on the above
+configuration directives.
 
 .SH SEE ALSO
 srsly(1), srslyd.conf(5)
