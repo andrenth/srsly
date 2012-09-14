@@ -59,7 +59,7 @@ You must create the directory structure and copy the above files into their
 correct location, or use bind-mounts to mirror the system files into the
 chroot area.
 
-Once the chroot environment is ready, you must configure it. Please refer to
+Once the chroot environment is ready, you must configure srsly. Please refer to
 the `srslyd(8)`, `srslyd.conf(5)` and `srsly(1)` manual pages. Afterwards,
 simply run
 
@@ -76,27 +76,26 @@ work you need to start srsly using the `start` command from upstart:
     # start srsly
 
 To enable srsly in Postfix, add srsly's listen address to the `smtpd_milters`
-directive in `main.cf` or in a specific smtpd instance in `master.cf`. By
-default, srsly listens on an IPv4 TCP socket on localhost, port 8387:
+directive in `main.cf` or in a specific `smtpd` instance in `master.cf`. By
+default, srsly listens on an IPv4 socket on localhost, port 8387:
 
     smtpd_milters = inet:localhost:8387
 
 ## Communication with Postfix
 
-In order to decide if the MAIL FROM address needs to be rewritten, srsly needs
-to determine if a message is a redirect. There is a simple criteria that can
+In order to decide if a MAIL FROM address needs to be rewritten, srsly needs
+to determine if the message is a redirect. There is a simple criteria that can
 be used in that decision: a redirect message is one in which both the envelope
-sender and evelope recipient are not local to the SMTP server.
+sender and envelope recipient are not local to the SMTP server.
 
 While this is a simple decision in principle, things are not that easy in
 practice. One of the difficulties of testing whether a given address is local
 or remote from the point of view of the SMTP server is that Postfix supports a
 large number of different databases that can be queried in order to perform
-address translations. Those include text files, regular expression tables, and
-SQL and LDAP queries, among others. Therefore, in order to provide a solution
-that works on every possible Postfix configuration, one would be forced to
-implement different connectors for each of the databases supported by
-Postfix.
+address translations, including text files, regular expression tables, SQL and
+LDAP queries, among others. Therefore, in order to provide a solution that
+works on every possible Postfix configuration, one would be forced to implement
+different connectors for each of the databases supported by Postfix.
 
 The approach taken by srsly is more pragmatic, if not officially supported by
 Postfix. In order to allow its multiple processes to communicate, Postfix
@@ -105,10 +104,10 @@ chroot area. One of these sockets, `proxymap`, can be used for querying any
 of the multiple database types supported by Postfix, using a protocol that is
 well documented in the Postfix source code.
 
-So, in order to test if an email address is local, srsly will recursively query
-Postfix via the `proxymap` socket until a final destination is reached. If
-that final destination matches a regular expression configured in srsly's
-configuration file, the address will be considered to be local.
+Therefore, in order to test if an email address is local, srsly will
+recursively query Postfix via the `proxymap` socket until a final destination
+is reached. If that final destination matches a regular expression configured
+in srsly's configuration file, the address will be considered to be local.
 
 Ideally, a "libpostmap" library would allow an application to perform the same
 queries done by the `postmap` command from Postfix without having to provide
@@ -118,7 +117,7 @@ srsly will use the approach described above.
 While the `proxymap` query protocol is well documented, srsly provides a number
 of directives in the `proxymap` section of its configuration file
 (`query_format`, `query_flags`, `query_socket`, `result_format` and
-`result_value_separator`) that allows one to change the way queries are made
+`result_value_separator`) that allow one to change the way queries are made
 and results are parsed. This provides some flexibility against possible
 changes in the Postfix query protocol without the need of recompiling srsly.
 Please see `srslyd.conf(5)` for more details on the above configuration
@@ -128,8 +127,8 @@ directives.
 
 The use of SRS results in a number of edge cases which arise in the case of
 a message with multiple recipients. Those edge cases are illustrated in a
-generic example below. Similar situations can occur in different redirection
-setups and can be considered variations of this example.
+generic example below. Similar situations that occur in different setups
+can be considered variations of this example.
 
 In this example, the `local*.com` domains are local to the SMTP server, while
 any other domain is remote.
@@ -142,14 +141,14 @@ Postfix:
 * `y@local2.com` translates to `y@external1.com` and to `y@external2.com`.
 
 The final result of the translations performed by Postfix will result in the
-folloing deliveries (without considering SRS for now):
+following deliveries (without considering SRS for now):
 
 1. A message from `a@example.com` to `x@local1.com` (local delivery);
 2. A message from `a@example.com` to `x@external1.com` and `y@external1.com`;
 3. A message from `a@example.com` to `y@external2.com`.
 
-With regards to SRS, two issues can be identified from the situations described
-above. Case 1 doesn't need SRS because it's not a redirection, but there's no
+With regards to SRS, two issues can be identified from the situation described
+above. Case 1 doesn't need SRS because it's not a redirect, but there's no
 way a milter application can force delivery to be split in order to avoid
 performing address rewrites in some of them. Case 2 results in a single
 message sent in one SMTP session, but this message is the result of
@@ -173,7 +172,7 @@ cases. Here's the approach taken by srsly.
 
 With regards to case 1 above, srsly will apply SRS even to the local delivery.
 While this is not necessary, it should cause no issues either. The more
-complicated scenarion is the one of choosing a forward domain. In the example
+complicated scenario is the one of choosing a forward domain. In the example
 above, we can observe the following:
 
 * `x@local1.com` translates to one remote address and to one local address;
