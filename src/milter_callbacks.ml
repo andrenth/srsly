@@ -108,8 +108,8 @@ let detached_in_main f x =
 let check_helo addr helo =
   detached_in_main (SPF.check_helo spf addr) helo
 
-let check_from addr helo from =
-  detached_in_main (SPF.check_from spf addr helo) from
+let check_from addr from =
+  detached_in_main (SPF.check_from spf addr) from
 
 let spf_check_helo ctx priv =
   let addr = priv.addr in
