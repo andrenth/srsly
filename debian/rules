@@ -11,12 +11,10 @@ override_dh_auto_build:
 	ocaml setup.ml -build
 
 override_dh_auto_install:
-	install -d -m0755 $(BUILD_DIR)/etc/rsyslog.d
 	install -d -m0755 $(BUILD_DIR)/etc/srsly
 	install -d -m0755 $(BUILD_DIR)/usr/lib/srsly
 	install -d -m0755 $(BUILD_DIR)/usr/sbin
 	install -d -m0755 $(BUILD_DIR)/var/lib/srsly
-	install -m0644 debian/rsyslog.conf $(BUILD_DIR)/etc/rsyslog.d/srsly.conf
 	install -m0644 etc/srslyd.conf $(BUILD_DIR)/etc/srsly/srslyd.conf
 	touch $(BUILD_DIR)/etc/srsly/srs_secret
 	install -m0755 _build/src/srsly.native $(BUILD_DIR)/usr/sbin/srsly
