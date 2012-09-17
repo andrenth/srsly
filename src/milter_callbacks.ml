@@ -133,7 +133,7 @@ let spf_check_helo ctx priv =
 let spf_check_from ctx priv from =
   let addr = priv.addr in
   let helo = O.some (priv.helo) in
-  let spf_res = check_from addr helo from in
+  let spf_res = check_from addr from in
   let milter_res = match SPF.result spf_res with
   | SPF.Fail c ->
       debug "MAIL SPF pass for %s" from;
