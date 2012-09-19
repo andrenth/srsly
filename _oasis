@@ -3,7 +3,7 @@ Name:        srsly
 Version:     1.0.0
 Synopsis:    SPF daemon
 Authors:     Andre Nathan
-License:     BSD3
+License:     GPL-2
 
 Executable "srslyd"
   Path:            src
