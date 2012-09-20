@@ -19,9 +19,8 @@ To build srsly you need to install its dependencies:
 
 Having those installed, simply run the following commands.
 
-    $ ocaml setup.ml -configure
-    $ ocaml setup.ml -build
-    # ocaml setup.ml -install
+    $ make
+    # make install
 
 It is also possible to build a Debian package with the command
 
