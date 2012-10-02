@@ -1,3 +1,9 @@
+srsly (1.0.1-0digirati1) lucid; urgency=low
+
+  * Version 1.0.1.
+
+ -- Andre Nathan <andre@digirati.com.br>  Mon, 02 Oct 2012 15:16:17 -0300
+
 srsly (1.0.0-0digirati1) lucid; urgency=low
 
   * First build.
