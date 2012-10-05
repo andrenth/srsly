@@ -138,7 +138,7 @@ let spf_check_from ctx priv from =
   let milter_res =
     match SPF.result spf_res with
     | SPF.Fail c ->
-        debug "MAIL SPF pass for %s" from;
+        debug "MAIL SPF failure for %s" from;
         milter_reject ctx (SPF.smtp_comment c)
     | SPF.Temperror ->
         debug "MAIL SPF temperror for %s" from;
