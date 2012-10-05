@@ -115,35 +115,37 @@ let spf_check_helo ctx priv =
   let addr = priv.addr in
   let helo = O.some (priv.helo) in
   let spf_res = check_helo addr helo in
-  let milter_res = match SPF.result spf_res with
-  | SPF.Fail c ->
-      debug "HELO SPF failure for %s" helo;
-      milter_reject ctx (SPF.smtp_comment c)
-  | SPF.Temperror ->
-      debug "HELO SPF temperror for %s" helo;
-      if (Config.spf_fail_on_helo_temperror ()) then
-        milter_tempfail ctx (SPF.header_comment spf_res)
-      else
-        Milter.Continue
-  | _ ->
-      debug "HELO SPF pass for %s" helo;
-      Milter.Continue in
+  let milter_res =
+    match SPF.result spf_res with
+    | SPF.Fail c ->
+        debug "HELO SPF failure for %s" helo;
+        milter_reject ctx (SPF.smtp_comment c)
+    | SPF.Temperror ->
+        debug "HELO SPF temperror for %s" helo;
+        if (Config.spf_fail_on_helo_temperror ()) then
+          milter_tempfail ctx (SPF.header_comment spf_res)
+        else
+          Milter.Continue
+    | _ ->
+        debug "HELO SPF pass for %s" helo;
+        Milter.Continue in
   spf_res, milter_res
 
 let spf_check_from ctx priv from =
   let addr = priv.addr in
   let helo = O.some (priv.helo) in
   let spf_res = check_from addr from in
-  let milter_res = match SPF.result spf_res with
-  | SPF.Fail c ->
-      debug "MAIL SPF pass for %s" from;
-      milter_reject ctx (SPF.smtp_comment c)
-  | SPF.Temperror ->
-      debug "MAIL SPF temperror for %s" from;
-      milter_tempfail ctx (SPF.header_comment spf_res)
-  | _ ->
-      debug "MAIL SPF pass for %s" from;
-      Milter.Continue in
+  let milter_res =
+    match SPF.result spf_res with
+    | SPF.Fail c ->
+        debug "MAIL SPF pass for %s" from;
+        milter_reject ctx (SPF.smtp_comment c)
+    | SPF.Temperror ->
+        debug "MAIL SPF temperror for %s" from;
+        milter_tempfail ctx (SPF.header_comment spf_res)
+    | _ ->
+        debug "MAIL SPF pass for %s" from;
+        Milter.Continue in
   spf_res, milter_res
 
 let spf_check ctx priv from =
