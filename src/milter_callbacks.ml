@@ -139,10 +139,10 @@ let spf_check_from ctx priv from =
       debug "MAIL SPF pass for %s" from;
       milter_reject ctx (SPF.smtp_comment c)
   | SPF.Temperror ->
-      debug "MAIL SPF temperror for %s" helo;
+      debug "MAIL SPF temperror for %s" from;
       milter_tempfail ctx (SPF.header_comment spf_res)
   | _ ->
-      debug "MAIL SPF pass for %s" helo;
+      debug "MAIL SPF pass for %s" from;
       Milter.Continue in
   spf_res, milter_res
 
