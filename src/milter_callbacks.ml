@@ -63,8 +63,6 @@ let choose_forward_domain rcpts =
     Lwt_preemptive.run_in_main (fun () -> ops.choose_forward_domain rcpts) in
   run (O.some !proxymap_ops)
 
-let spf = SPF.server SPF.Dns_cache
-
 let srs_re = Str.regexp "^SRS\\([01]\\)[=+-]"
 
 let with_priv_data z ctx f =
@@ -106,10 +104,16 @@ let detached_in_main f x =
   Lwt_preemptive.run_in_main (fun () -> Lwt_preemptive.detach f x)
 
 let check_helo addr helo =
-  detached_in_main (SPF.check_helo spf addr) helo
+  let spf = SPF.server SPF.Dns_cache in
+  let res = detached_in_main (SPF.check_helo spf addr) helo in
+  SPF.free_server spf;
+  res
 
 let check_from addr from =
-  detached_in_main (SPF.check_from spf addr) from
+  let spf = SPF.server SPF.Dns_cache in
+  let res = detached_in_main (SPF.check_from spf addr) from in
+  SPF.free_server spf;
+  res
 
 let spf_check_helo ctx priv =
   let addr = priv.addr in
