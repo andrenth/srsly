@@ -49,12 +49,13 @@ type spf_config =
   }
 
 type srs_config =
-  { secret_file       : Lwt_io.file_name
-  ; secrets_directory : Lwt_io.file_name
-  ; hash_max_age      : int
-  ; hash_length       : int
-  ; separator         : char
-  ; secret_length     : int
+  { secret_file        : Lwt_io.file_name
+  ; secrets_directory  : Lwt_io.file_name
+  ; hash_max_age       : int
+  ; hash_length        : int
+  ; separator          : char
+  ; secret_length      : int
+  ; force_rewrite_from : Network.t list
   }
 
 type t =
@@ -172,6 +173,7 @@ module SRS_defaults = struct
   let hash_length = default_int 8
   let separator = default_string "="
   let secret_length = default_int 8
+  let force_rewrite_from = default_string_list []
 end
 
 let srslyd_spec =
@@ -234,6 +236,7 @@ let srs_spec =
     ; "hash_length", D.hash_length, [int]
     ; "separator", D.separator, [string_in ["+"; "-"; "="]]
     ; "secret_length", D.secret_length, [int_greater_than 7]
+    ; "force_rewrite_from", D.force_rewrite_from, [string_list]
     ])
 
 let spec =
@@ -259,7 +262,7 @@ let find_spf key conf =
 let find_srs key conf =
   Release_config.get conf "srs" key
 
-let whitelist_of_list = List.map Network.of_string
+let network_list = List.map Network.of_string
 
 let make c =
   let srslyd_config =
@@ -299,19 +302,21 @@ let make c =
     let get = find_spf in
     { fail_on_helo_temperror = bool_value (get "fail_on_helo_temperror" c)
     ; local_whitelist =
-        whitelist_of_list (string_list_value (get "local_whitelist" c))
+        network_list (string_list_value (get "local_whitelist" c))
     ; relay_whitelist =
-        whitelist_of_list (string_list_value (get "relay_whitelist" c))
+        network_list (string_list_value (get "relay_whitelist" c))
     ; result_headers = string_list_value (get "result_headers" c)
     } in
   let srs_config =
     let get = find_srs in
-    { secret_file       = string_value (get "secret_file" c)
-    ; secrets_directory = string_value (get "secrets_directory" c)
-    ; hash_max_age      = int_value (get "hash_max_age" c)
-    ; hash_length       = int_value (get "hash_length" c)
-    ; separator         = (string_value (get "separator" c)).[0]
-    ; secret_length     = int_value (get "secret_length" c)
+    { secret_file        = string_value (get "secret_file" c)
+    ; secrets_directory  = string_value (get "secrets_directory" c)
+    ; hash_max_age       = int_value (get "hash_max_age" c)
+    ; hash_length        = int_value (get "hash_length" c)
+    ; separator          = (string_value (get "separator" c)).[0]
+    ; secret_length      = int_value (get "secret_length" c)
+    ; force_rewrite_from =
+        network_list (string_list_value (get "force_rewrite_from" c))
     } in
   { srslyd   = srslyd_config
   ; milter   = milter_config
@@ -466,3 +471,6 @@ let srs_separator () =
 
 let srs_secret_length () =
   (current ()).srs.secret_length
+
+let srs_force_rewrite_from () =
+  (current ()).srs.force_rewrite_from

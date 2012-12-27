@@ -194,6 +194,9 @@ let reverse_srs_signed_rcpts ctx rcpts =
 let whitelist h =
   Whitelisted h
 
+let force_rewrite_from addr =
+  List.exists (Network.includes addr) (Config.srs_force_rewrite_from ())
+
 let authentication_results ctx priv spf_res =
   let myhostname = O.default "localhost" (Milter.getsymval ctx "j") in
   let res = SPF.string_of_result (SPF.result spf_res) in
@@ -287,8 +290,12 @@ let eom ctx =
     (fun priv ->
       let from = O.some priv.from in
       let rcpts = priv.rcpts in
+      let addr = priv.addr in
       (if priv.is_bounce then
         reverse_srs_signed_rcpts ctx rcpts
+      else if force_rewrite_from addr then
+        let myhostname = O.default "localhost" (Milter.getsymval ctx "j") in
+        srs_forward ctx from myhostname
       else if is_remote_sender from then
         match choose_forward_domain rcpts with
         | None -> ()

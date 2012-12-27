@@ -343,6 +343,13 @@ Defines the length SRS hash, in days.  Defaults to 8.
 Defines the SRS separator character.  Valid separators are `=', `+' and `-'.
 Defaults to `='.
 
+.TP
+\fIforce_rewrite_from (string list)\fR
+Force the rewrite of the MAIL FROM address in messages coming from the
+specified addresses. The forward domain in this case will always be the
+value of the `j` milter macro, which corresponds to the \fI$myhostname\fR
+variable in Postfix.
+
 .SH FILES
 
 .TP

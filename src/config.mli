@@ -46,3 +46,4 @@ val srs_hash_max_age : unit -> int
 val srs_hash_length : unit -> int
 val srs_separator : unit -> char
 val srs_secret_length : unit -> int
+val srs_force_rewrite_from : unit -> Network.t list
