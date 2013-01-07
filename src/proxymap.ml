@@ -5,6 +5,8 @@ open Log_lwt
 open Util
 
 module O = Release_util.Option
+module B = Release_buffer.String
+module Io = Release_io.Make (B)
 
 let replace_formats =
   List.fold_left (fun s (fmt, rep) -> Str.global_replace (Str.regexp fmt) rep s)
@@ -18,26 +20,26 @@ let build_request fmt table flags key =
 
 let alloc_read fd =
   let rec read buf =
-    let siz = Release_buffer.size buf in
-    let len = Release_buffer.length buf in
-    lwt n = Release_io.read_once fd buf len (siz - len) in
+    let siz = B.size buf in
+    let len = B.length buf in
+    lwt n = Io.read_once fd buf len (siz - len) in
     if len + n = siz then begin
-      let buf' = Release_buffer.create (siz * 2) in
-      Release_buffer.add_buffer buf' buf;
+      let buf' = B.create (siz * 2) in
+      B.add_buffer buf' buf;
       read buf'
     end else
       return buf in
-  read (Release_buffer.create 8192)
+  read (B.create 8192)
 
 let make_request socket req =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
   try_lwt
     lwt () = Lwt_unix.connect fd (Unix.ADDR_UNIX socket) in
-    lwt () = Release_io.write fd (Release_buffer.of_string req) in
+    lwt () = Io.write fd (B.of_string req) in
     lwt buf = alloc_read fd in
     lwt () = Lwt_unix.close fd in
-    let n = Release_buffer.length buf in
-    return (Release_buffer.to_string (Release_buffer.sub buf 0 n))
+    let n = B.length buf in
+    return (B.to_string (B.sub buf 0 n))
   with
   | Unix.Unix_error (e, _, _) ->
       lwt () = Lwt_unix.close fd in
