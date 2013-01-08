@@ -12,7 +12,8 @@ To build srsly you need to install its dependencies:
 
 * [lwt](http://ocsigen.org/lwt/)
 * [ocaml-uint](https://github.com/andrenth/ocaml-uint)
-* [release](https://github.com/andrenth/release)
+* [release](https://github.com/andrenth/release) (As of srsly 1.1.1, please
+  install `release` from its `master` branch.)
 * [ocaml-milter](https://github.com/andrenth/ocaml-milter)
 * [ocaml-spf](https://github.com/andrenth/ocaml-spf)
 * [ocaml-srs](https://github.com/andrenth/ocaml-srs)
