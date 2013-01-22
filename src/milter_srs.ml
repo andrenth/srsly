@@ -11,9 +11,9 @@ let unserialize_secrets s =
 let make_srs secrets =
   SRS.make
     secrets
-    (Config.srs_hash_max_age ())
-    (Config.srs_hash_length ())
-    (Config.srs_separator ())
+    (Srslyd_config.srs_hash_max_age ())
+    (Srslyd_config.srs_hash_length ())
+    (Srslyd_config.srs_separator ())
 
 let reload secrets =
   srs := Some (make_srs secrets)

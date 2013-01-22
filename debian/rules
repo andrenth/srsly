@@ -12,10 +12,13 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	install -d -m0755 $(BUILD_DIR)/etc/srsly
+	install -d -m0755 $(BUILD_DIR)/etc/srsly/conf.d
+	install -d -m0755 $(BUILD_DIR)/etc/srsly/srs_secrets.d
 	install -d -m0755 $(BUILD_DIR)/usr/lib/srsly
 	install -d -m0755 $(BUILD_DIR)/usr/sbin
 	install -d -m0755 $(BUILD_DIR)/var/lib/srsly
 	install -m0644 etc/srslyd.conf $(BUILD_DIR)/etc/srsly/srslyd.conf
+	install -m0644 etc/conf.d/default.conf $(BUILD_DIR)/etc/srsly/conf.d/default.conf
 	touch $(BUILD_DIR)/etc/srsly/srs_secret
 	install -m0755 _build/src/srsly.native $(BUILD_DIR)/usr/sbin/srsly
 	install -m0755 _build/src/srsly_milter.native $(BUILD_DIR)/usr/lib/srsly/srsly-milter

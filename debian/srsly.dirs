@@ -1,4 +1,5 @@
 /etc/srsly
+/etc/srsly/conf.d
 /etc/srsly/srs_secrets.d
 var/lib/srsly/dev
 var/lib/srsly/etc

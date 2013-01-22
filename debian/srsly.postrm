@@ -8,6 +8,8 @@ case "$1" in
     delgroup --quiet --system srsly > /dev/null || true
     rm -f /var/run/srslyd.pid /var/run/srsly.socket
     dpkg-statoverride --remove /etc/srsly/srslyd.conf >/dev/null 2>&1 || true
+    dpkg-statoverride --remove /etc/srsly/conf.d >/dev/null 2>&1 || true
+    dpkg-statoverride --remove /etc/srsly/conf.d/default >/dev/null 2>&1 || true
     dpkg-statoverride --remove /etc/srsly/srs_secret >/dev/null 2>&1 || true
     dpkg-statoverride --remove /etc/srsly/srs_secrets.d >/dev/null 2>&1 || true
     dpkg-statoverride --remove /var/lib/srsly >/dev/null 2>&1 || true

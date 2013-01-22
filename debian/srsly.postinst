@@ -7,6 +7,12 @@ case "$1" in
     if ! dpkg-statoverride --list /etc/srsly/srslyd.conf >/dev/null 2>&1; then
       dpkg-statoverride --update --add root root 0600 /etc/srsly/srslyd.conf
     fi
+    if ! dpkg-statoverride --list /etc/srsly/conf.d >/dev/null 2>&1; then
+      dpkg-statoverride --update --add root root 0700 /etc/srsly/conf.d
+    fi
+    if ! dpkg-statoverride --list /etc/srsly/conf.d/default.conf >/dev/null 2>&1; then
+      dpkg-statoverride --update --add root root 0600 /etc/srsly/conf.d/default.conf
+    fi
     if ! dpkg-statoverride --list /etc/srsly/srs_secret >/dev/null 2>&1; then
       dpkg-statoverride --update --add root root 0600 /etc/srsly/srs_secret
     fi

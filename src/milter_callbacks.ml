@@ -5,6 +5,7 @@ open Log_preemptive
 open Util
 
 module O = Release_util.Option
+module C = Milter_config
 
 type result
   = No_result
@@ -122,7 +123,7 @@ let spf_check_helo ctx priv =
         milter_reject ctx (SPF.smtp_comment c)
     | SPF.Temperror ->
         debug "HELO SPF temperror for %s" helo;
-        if (Config.spf_fail_on_helo_temperror ()) then
+        if (C.spf_fail_on_helo_temperror ()) then
           milter_tempfail ctx (SPF.header_comment spf_res)
         else
           Milter.Continue
@@ -189,9 +190,6 @@ let reverse_srs_signed_rcpts ctx rcpts =
 
 let whitelist h =
   Whitelisted h
-
-let force_rewrite_from addr =
-  List.exists (Network.includes addr) (Config.srs_force_rewrite_from ())
 
 let authentication_results ctx priv spf_res =
   let myhostname = O.default "localhost" (Milter.getsymval ctx "j") in
@@ -262,11 +260,14 @@ let envfrom ctx from args =
           | No_result | Spf_response _ ->
               (* This callback may be called multiple times in the same
                * connection, so ignore previous results if any. *)
-              debug "doing SPF verification";
-              let spf_res, milter_res = spf_check ctx priv from in
-              let result =
-                O.may_default priv.result (fun r -> Spf_response r) spf_res in
-              { priv with result = result }, milter_res
+              if C.spf_enable () then begin
+                debug "doing SPF verification";
+                let spf_res, milter_res = spf_check ctx priv from in
+                let result =
+                  O.may_default priv.result (fun r -> Spf_response r) spf_res in
+                { priv with result = result }, milter_res
+              end else
+                priv, Milter.Continue
           | Whitelisted _ ->
               (* Whitelists are IP-based, so just move on. *)
               debug "connect address is whitelisted";
@@ -286,10 +287,9 @@ let eom ctx =
     (fun priv ->
       let from = O.some priv.from in
       let rcpts = priv.rcpts in
-      let addr = priv.addr in
       (if priv.is_bounce then
         reverse_srs_signed_rcpts ctx rcpts
-      else if force_rewrite_from addr then
+      else if C.srs_always_rewrite () then
         let myhostname = O.default "localhost" (Milter.getsymval ctx "j") in
         srs_forward ctx from myhostname
       else if is_remote_sender from then
@@ -303,7 +303,7 @@ let eom ctx =
           priv, Milter.Continue
       | Spf_response r ->
           info "SPF result: %s" (SPF.string_of_result (SPF.result r));
-          List.iter (add_spf_header ctx priv r) (Config.spf_result_headers ());
+          List.iter (add_spf_header ctx priv r) (C.spf_result_headers ());
           priv, Milter.Continue
       | No_result ->
           priv, Milter.Continue)

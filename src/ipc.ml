@@ -4,13 +4,13 @@ module O = Release_util.Option
 
 module Slave_types = struct
   type request
-    = Configuration_request
+    = Configuration_request of string
     | Check_remote_sender of string
     | Choose_srs_forward_domain of string list
     | SRS_secrets_request
 
   type response
-    = Configuration of Config.t
+    = Configuration of (Srslyd_config.t * Milter_config.t)
     | Remote_sender_check of bool
     | SRS_forward_domain of string option
     | SRS_secrets of (string * string list)
@@ -23,28 +23,28 @@ module Slave_ops = struct
   include Slave_types
 
   let string_of_request = function
-    | Configuration_request -> "a"
+    | Configuration_request s -> sprintf "a:%s" s
     | Check_remote_sender s -> sprintf "b:%s" s
     | Choose_srs_forward_domain rs -> sprintf "c:%s" (Marshal.to_string rs [])
     | SRS_secrets_request -> "d"
 
   let request_of_string s =
     match s.[0] with
-    | 'a' -> Configuration_request
+    | 'a' -> Configuration_request (payload s)
     | 'b' -> Check_remote_sender (payload s)
     | 'c' -> Choose_srs_forward_domain (Marshal.from_string (payload s) 0)
     | 'd' -> SRS_secrets_request
     | other -> failwith (sprintf "unexpected request: '%c'" other)
 
   let string_of_response = function
-    | Configuration c -> sprintf "A:%s" (Config.serialize c)
+    | Configuration cs -> sprintf "A:%s" (Marshal.to_string cs [])
     | Remote_sender_check b -> sprintf "B:%s" (string_of_bool b)
     | SRS_forward_domain d -> sprintf "C:%s" (Marshal.to_string d [])
     | SRS_secrets ss -> sprintf "D:%s" (Milter_srs.serialize_secrets ss)
 
   let response_of_string s =
     match s.[0] with
-    | 'A' -> Configuration (Config.unserialize (payload s))
+    | 'A' -> Configuration (Marshal.from_string s 2)
     | 'B' -> Remote_sender_check (bool_of_string (payload s))
     | 'C' -> SRS_forward_domain (Marshal.from_string s 2)
     | 'D' -> SRS_secrets (Milter_srs.unserialize_secrets (payload s))

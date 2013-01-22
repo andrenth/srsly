@@ -5,30 +5,38 @@ open Ipc.Slave_types
 open Log_lwt
 open Util
 
+module S_conf = Srslyd_config
+module M_conf = Milter_config
+
+let instance_name = ref ""
+
 let ipc_error = function
   | `EOF -> error "EOF on IPC socket" >> exit 1
   | `Timeout -> error "timeout on IPC socket" >> exit 1
 
 let read_configuration fd =
   let handle_ipc = function
-    | `Response (Configuration c) ->
+    | `Response (Configuration (sc, mc)) ->
         lwt () = notice "received a new configuration; replacing" in
-        Config.replace c;
-        set_log_level (Config.srslyd_log_level ());
-        Milter.setdbg (Config.milter_debug_level ());
+        S_conf.replace sc;
+        M_conf.replace mc;
+        set_log_level (S_conf.srslyd_log_level ());
+        Milter.setdbg (M_conf.milter_debug_level ());
         return ()
     | `EOF | `Timeout as e ->
         ipc_error e
     | _ ->
         fail_lwt "unexpected response while waiting for configuration" in
-  Ipc.Slave.make_request fd Configuration_request handle_ipc
+  Ipc.Slave.make_request fd (Configuration_request !instance_name) handle_ipc
 
 let read_srs_secrets fd =
   let handle_ipc = function
     | `Response (SRS_secrets ss) ->
-        lwt () = notice "received new SRS secrets; reloading" in
+        lwt () =
+          notice "instance %s received new SRS secrets; reloading"
+            !instance_name in
         Milter_srs.reload ss;
-        return ()
+        return_unit
     | `EOF | `Timeout as e ->
         ipc_error e
     | _ ->
@@ -91,7 +99,7 @@ let flags =
 
 let filter =
   { Milter.empty with
-    Milter.name      = "srsly-milter"
+    Milter.name      = "srsly-milter (" ^ !instance_name ^ ")"
   ; Milter.flags     = flags
   ; Milter.connect   = Some Milter_callbacks.connect
   ; Milter.helo      = Some Milter_callbacks.helo
@@ -104,7 +112,7 @@ let filter =
   }
 
 let main fd =
-  lwt () = notice "starting up" in
+  lwt () = notice "running instance %s" !instance_name in
   ignore (Lwt_unix.on_signal Sys.sighup (handle_sighup fd));
   ignore (Lwt_unix.on_signal Sys.sigusr1 (handle_sigusr1 fd));
   lwt () = read_srs_secrets fd in
@@ -114,20 +122,37 @@ let main fd =
     ; C.is_remote_sender      = proxymap_is_remote_sender fd
     } in
   C.init callback_ops;
-  Milter.setdbg (Config.milter_debug_level ());
-  Milter.setconn (Config.milter_listen_address ());
+  Milter.setdbg (M_conf.milter_debug_level ());
+  Milter.setconn (M_conf.milter_listen_address ());
   Milter.register filter;
   Lwt_preemptive.detach Milter.main ()
 
+let set_instance_name config_path =
+  let module F = Filename in
+  if F.check_suffix config_path ".conf" then
+    instance_name := F.chop_suffix (F.basename config_path) ".conf"
+  else begin
+    ignore_result (error "invalid configuration file name: %s" config_path);
+    exit 1
+  end
+
 let () =
   let config_t =
-    if Array.length Sys.argv > 1 then
-      Config.load Sys.argv.(1)
-    else
-      Config.load_defaults () in
+    if Array.length Sys.argv = 3 then begin
+      let srslyd_config = Sys.argv.(1) in
+      let milter_config = Sys.argv.(2) in
+      lwt () = S_conf.load srslyd_config in
+      lwt () = M_conf.load milter_config in
+      set_instance_name milter_config;
+      return_unit
+    end else
+      lwt () = notice "setting configuration parameters to default values" in
+      lwt () = S_conf.load_defaults () in
+      lwt () = M_conf.load_defaults () in
+      return_unit in
   Lwt_main.run config_t;
-  set_log_level (Config.srslyd_log_level ());
+  set_log_level (S_conf.srslyd_log_level ());
   Release.me
-    ~syslog:(Config.srslyd_background ())
-    ~user:(Config.milter_user ())
+    ~syslog:(S_conf.srslyd_background ())
+    ~user:(S_conf.milter_user ())
     ~main:main ()

@@ -7,6 +7,7 @@ open Util
 module O = Release_util.Option
 module B = Release_buffer.String
 module Io = Release_io.Make (B)
+module C = Srslyd_config
 
 let replace_formats =
   List.fold_left (fun s (fmt, rep) -> Str.global_replace (Str.regexp fmt) rep s)
@@ -115,11 +116,11 @@ let parse_result res fmt sep =
     failwith (sprintf "parse_result: missing keys")
 
 let query key table =
-  let query_fmt = Config.proxymap_query_format () in
-  let flags = Config.proxymap_query_flags () in
-  let socket = Config.proxymap_query_socket () in
-  let res_fmt = Config.proxymap_result_format () in
-  let sep = Config.proxymap_result_value_separator () in
+  let query_fmt = C.proxymap_query_format () in
+  let flags = C.proxymap_query_flags () in
+  let socket = C.proxymap_query_socket () in
+  let res_fmt = C.proxymap_result_format () in
+  let sep = C.proxymap_result_value_separator () in
   let req = build_request query_fmt table flags key in
   lwt raw_res = make_request socket req in
   return (parse_result raw_res res_fmt sep)
@@ -192,12 +193,12 @@ let proxymap_key fmt addr =
  * result is a remote address.
  *)
 let is_remote_sender sender =
-  let table = Config.proxymap_sender_lookup_table () in
-  let local_re = Config.proxymap_local_sender_regexp () in
-  let fmt = Config.proxymap_sender_lookup_key_format () in
+  let table = C.proxymap_sender_lookup_table () in
+  let local_re = C.proxymap_local_sender_regexp () in
+  let fmt = C.proxymap_sender_lookup_key_format () in
   let key = proxymap_key fmt sender in
-  let max_depth = Config.proxymap_sender_query_max_depth () in
-  let max_res = Config.proxymap_sender_query_max_results () in
+  let max_depth = C.proxymap_sender_query_max_depth () in
+  let max_res = C.proxymap_sender_query_max_results () in
   lwt () = debug "is_remote_sender: querying for %s" key in
   let is_remote _ sender max res =
     if not (sender =~ local_re) then
@@ -275,12 +276,13 @@ let visit_rcpt local_re orig_rcpt final_rcpt max_res (rcpts, counts) =
  * is done.
  *)
 let choose_forward_domain orig_rcpts =
-  let table = Config.proxymap_recipient_lookup_table () in
-  let re = Config.proxymap_local_recipient_regexp () in
-  let fmt = Config.proxymap_recipient_lookup_key_format () in
-  let max_depth = Config.proxymap_recipient_query_max_depth () in
+  let table = C.proxymap_recipient_lookup_table () in
+  let re = C.proxymap_local_recipient_regexp () in
+  let fmt = C.proxymap_recipient_lookup_key_format () in
+  let max_depth = C.proxymap_recipient_query_max_depth () in
   let num_rcpts = List.length orig_rcpts in
-  let max_res = num_rcpts * Config.proxymap_recipient_query_max_results () in
+  let max_res =
+    num_rcpts * C.proxymap_recipient_query_max_results () in
   lwt _, _, counts =
     Lwt_list.fold_left_s
       (fun (max_res, rcpts, counts) rcpt ->

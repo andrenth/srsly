@@ -6,6 +6,7 @@ open Log_lwt
 open Util
 
 module O = Release_util.Option
+module C = Srslyd_config
 
 let srslyd = "/usr/lib/srsly/srslyd"
 
@@ -14,7 +15,7 @@ let err fmt =
 
 let control f =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-  let sock_addr = Lwt_unix.ADDR_UNIX (Config.srslyd_control_socket ()) in
+  let sock_addr = Lwt_unix.ADDR_UNIX (C.srslyd_control_socket ()) in
   lwt () =
     try_lwt
       Lwt_unix.connect fd sock_addr
@@ -43,14 +44,14 @@ let restart config =
 
 let read_old_secret () =
   try_lwt
-    let file = Config.srs_secret_file () in
+    let file = C.srs_secret_file () in
     Lwt_io.with_file ~mode:Lwt_io.input file Lwt_io.read_line
   with Unix.Unix_error (e, _, _) ->
     lwt () = error "cannot read SRS secret: %s" (Unix.error_message e) in
     exit 1
 
 let random_init () =
-  let random_dev = Config.srslyd_random_device () in
+  let random_dev = C.srslyd_random_device () in
   let ch = open_in random_dev in
   let seed = input_binary_int ch in
   close_in ch;
@@ -59,7 +60,7 @@ let random_init () =
 let make_secret () =
   let ascii_min = 0x21 in
   let ascii_max = 0x7e in
-  let len = Config.srs_secret_length () in
+  let len = C.srs_secret_length () in
   let secret = String.create len in
   random_init ();
   for i = 0 to len - 1 do
@@ -71,8 +72,8 @@ let new_secret () =
   Lwt_io.printl (make_secret ())
 
 let replace_secret () =
-  let file = Config.srs_secret_file () in
-  let dir = Config.srs_secrets_directory () in
+  let file = C.srs_secret_file () in
+  let dir = C.srs_secrets_directory () in
   let old_file = dir ^"/"^ sprintf "%d.%.0f" (Unix.getpid ()) (Unix.time ()) in
   let output = Lwt_io.output in
   let write_secret secret ch =
@@ -95,8 +96,8 @@ let map_stream f s =
   lwt u = Lwt_stream.fold (fun x u -> lwt () = u in f x) s return_unit in u
 
 let expire () =
-  let dir = Config.srs_secrets_directory () in
-  let max_age = seconds_of_days (Config.srs_hash_max_age ()) in
+  let dir = C.srs_secrets_directory () in
+  let max_age = seconds_of_days (C.srs_hash_max_age ()) in
   let secrets = Lwt_unix.files_of_directory dir in
   let remove file =
     if file <> "." && file <> ".." then
@@ -130,8 +131,8 @@ let main argc argv =
   | "help" ->
       usage 0
   | _ ->
-      lwt () = Config.load config in
-      set_log_level (Config.srslyd_log_level ());
+      lwt () = C.load config in
+      set_log_level (C.srslyd_log_level ());
       match argv.(1) with
       | "start" -> start config
       | "stop" ->  stop ()
