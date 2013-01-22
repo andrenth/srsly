@@ -2,5 +2,5 @@
 _build/
 setup.data
 setup.log
-*.swp
+*.sw*
 *.native
