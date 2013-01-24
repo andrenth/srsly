@@ -10,38 +10,47 @@ module M_conf = Milter_config
 
 let instance_name = ref ""
 
+(* In theory these locks shouldn't be necessary since even though libmilter
+ * is multi-threaded, OCaml will not run pthreads concurrently. *)
+let ipc_lock = Lwt_mutex.create ()
+
 let ipc_error = function
   | `EOF -> error "EOF on IPC socket" >> exit 1
   | `Timeout -> error "timeout on IPC socket" >> exit 1
 
 let read_configuration fd =
-  let handle_ipc = function
-    | `Response (Configuration (sc, mc)) ->
-        lwt () = notice "received a new configuration; replacing" in
-        S_conf.replace sc;
-        M_conf.replace mc;
-        set_log_level (S_conf.srslyd_log_level ());
-        Milter.setdbg (M_conf.milter_debug_level ());
-        return ()
-    | `EOF | `Timeout as e ->
-        ipc_error e
-    | _ ->
-        fail_lwt "unexpected response while waiting for configuration" in
-  Ipc.Slave.make_request fd (Configuration_request !instance_name) handle_ipc
+  Lwt_mutex.with_lock ipc_lock
+    (fun () ->
+      let handle_ipc = function
+        | `Response (Configuration (sc, mc)) ->
+            lwt () = notice "received a new configuration; replacing" in
+            S_conf.replace sc;
+            M_conf.replace mc;
+            set_log_level (S_conf.srslyd_log_level ());
+            Milter.setdbg (M_conf.milter_debug_level ());
+            return ()
+        | `EOF | `Timeout as e ->
+            ipc_error e
+        | _ ->
+            fail_lwt "unexpected response while waiting for configuration" in
+      let req = Configuration_request !instance_name in
+      Ipc.Slave.Client.make_request fd req handle_ipc)
 
 let read_srs_secrets fd =
-  let handle_ipc = function
-    | `Response (SRS_secrets ss) ->
-        lwt () =
-          notice "instance %s received new SRS secrets; reloading"
-            !instance_name in
-        Milter_srs.reload ss;
-        return_unit
-    | `EOF | `Timeout as e ->
-        ipc_error e
-    | _ ->
-        fail_lwt "unexpected response while waiting for SRS secrets" in
-  Ipc.Slave.make_request fd SRS_secrets_request handle_ipc
+  Lwt_mutex.with_lock ipc_lock
+    (fun () ->
+      let handle_ipc = function
+        | `Response (SRS_secrets ss) ->
+            lwt () =
+              notice "instance %s received new SRS secrets; reloading"
+                !instance_name in
+            Milter_srs.reload ss;
+            return_unit
+        | `EOF | `Timeout as e ->
+            ipc_error e
+        | _ ->
+            fail_lwt "unexpected response while waiting for SRS secrets" in
+      Ipc.Slave.Client.make_request fd SRS_secrets_request handle_ipc)
 
 let join_counts = function
   | [] ->
@@ -63,7 +72,9 @@ let proxymap_is_remote_sender fd =
     | _ ->
         fail_lwt "unexpected response while waiting for remote sender check" in
   (fun sender ->
-    Ipc.Slave.make_request fd (Check_remote_sender sender) handle_ipc)
+    let req = Check_remote_sender sender in
+    Lwt_mutex.with_lock ipc_lock
+      (fun () -> Ipc.Slave.Client.make_request fd req handle_ipc))
 
 let proxymap_choose_forward_domain fd =
   let handle_ipc = function
@@ -76,7 +87,9 @@ let proxymap_choose_forward_domain fd =
     | _ ->
         fail_lwt "unexpected response while waiting for SRS forward domain" in
   (fun rcpts ->
-    Ipc.Slave.make_request fd (Choose_srs_forward_domain rcpts) handle_ipc)
+    let req = Choose_srs_forward_domain rcpts in
+    Lwt_mutex.with_lock ipc_lock
+      (fun () -> Ipc.Slave.Client.make_request fd req handle_ipc))
 
 let handle_sighup fd _ =
   Lwt.async

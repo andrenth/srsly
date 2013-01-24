@@ -65,7 +65,7 @@ let slave_ipc_handler fd =
         lwt () = info "sending SRS secrets to slave" in
         lwt secrets = Srs_util.read_srs_secrets () in
         return (SRS_secrets secrets) in
-  Ipc.Slave.handle_request fd handler
+  Ipc.Slave.Server.handle_request fd handler
 
 let control_connection_handler fd =
   let handler = function
@@ -87,7 +87,7 @@ let control_connection_handler fd =
         Unix.kill (Unix.getpid ()) sigterm;
         lwt () = Lwt_unix.sleep 1.0 in (* give the signal handler time to run *)
         raise_lwt (Failure "I'm already dead!") in
-  Ipc.Control.handle_request ~eof_warning:false ~timeout:5. fd handler
+  Ipc.Control.Server.handle_request ~eof_warning:false ~timeout:5. fd handler
 
 let filter_dir f dir =
   let entries = Lwt_unix.files_of_directory dir in

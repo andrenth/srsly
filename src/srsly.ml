@@ -21,13 +21,15 @@ let control f =
       Lwt_unix.connect fd sock_addr
     with Unix.Unix_error (e, _, _) ->
       err "cannot connect to control socket: %s" (Unix.error_message e) in
-  finalize (fun () -> f fd) (fun () -> Lwt_unix.close fd)
+  finalize
+    (fun () -> f fd)
+    (fun () -> Lwt_unix.close fd)
 
 let start config =
   Unix.execv srslyd [| srslyd; config |]
 
 let stop () =
-  control (fun fd -> Ipc.Control.write_request fd Stop)
+  control (fun fd -> Ipc.Control.Client.write_request fd Stop)
 
 let reload file =
   let config = Some file in
@@ -36,7 +38,9 @@ let reload file =
     | `Timeout -> err "could not reload srslyd: timeout on control socket"
     | `Response Reloaded_config -> return ()
     | `Response _ -> err "unexpected response on control socket" in
-  control (fun fd -> Ipc.Control.make_request fd (Reload_config config) handler)
+  control
+    (fun fd ->
+      Ipc.Control.Client.make_request fd (Reload_config config) handler)
 
 let restart config =
   lwt () = stop () in
@@ -87,7 +91,7 @@ let replace_secret () =
     | `Timeout -> err "could not reload SRS secrets: timeout on control socket"
     | `Response Reloaded_secrets -> return ()
     | `Response _ -> err "unexpected response on control socket" in
-  control (fun fd -> Ipc.Control.make_request fd Reload_secrets handler)
+  control (fun fd -> Ipc.Control.Client.make_request fd Reload_secrets handler)
 
 let seconds_of_days n =
   float_of_int n *. 24.0 *. 60.0 *. 60.0
