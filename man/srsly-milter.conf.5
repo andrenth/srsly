@@ -1,0 +1,100 @@
+.TH srsly-milter.conf 5 "srsly milter instance configuration file"
+
+.SH NAME
+.B srsly-milter.conf
+\- Configuration file for \fIsrslyd(8)\fR milter instances
+
+.SH SYNOPSYS
+.B /etc/srsly/conf.d/*.conf
+
+.SH DESCRIPTION
+\fIsrslyd(8)\fR supports multiple milter instances.  These are loaded from
+configuration files from the directory defined in the \fIconfig_path\fR
+configuration directive in the \fImilter\fR section of \fIsrslyd.conf(5)\fR,
+which by default is "/etc/srsly/conf.d".  For each file whose name ends in
+".conf" in this directory, a milter instance will be loaded.
+
+The configuration syntax of milter instances is the same as the one used in
+\fIsrslyd.conf(5)\fR. Please refer to that manual page for a complete
+description.
+
+.SS milter
+This section configures milter-related parameters.
+
+\fIlisten_address (string)\fR
+Defines the listen address for the milter instance.  This parameter must follow
+the syntax of milter socket specifications, as indicated below.
+.TP
+.IP \(bu
+\fI{unix|local}:/path/to/file\fR
+\(em a named pipe.
+.IP \(bu
+\fIinet:port@{hostname|ip-address}\fR
+\(em an IPV4 socket.
+.IP \(bu
+\fIinet6:port@{hostname|ip-address}\fR
+\(em an IPV6 socket.
+
+.TP
+\fIdebug_level (integer)\fR
+Sets the milter debug level for this instance.  Must be an integer between 0
+and 6.  Defaults to 0.
+
+.SS spf
+This section contains SPF-specific parameters.
+
+.TP
+\fIenable (boolean)\fR
+Defines whether SPF checking is enabled for this milter instance.  Defaults to
+true.
+
+.TP
+\fIfail_on_helo_temperror (boolean)\fR
+Defines whether a DNS temporary error condition will result in an SPF error
+response.  Defaults to true.
+
+.TP
+\fIlocal_whitelist (string list)\fR
+Defines a list of local IP addresses for which SPF verification will not be run.
+Defaults to ["127.0.0.0/8", "::ffff:127.0.0.0/104"].
+
+.TP
+\fIrelay_whitelist (string list)\fR
+Defines a list of IP addresses of trusted relays for which SPF verification
+will be skipped.  Defaults to [].
+
+.TP
+\fIresult_headers (string list)\fR
+Defines which SPF result headers will be added to the message by srsly after
+SPF verification.  This can be either "Authentication-Results", the older
+"Received-SPF" or both.  Defaults to ["Authentication-Results"].
+
+.SS srs
+This section defines the SRS settings used by \fIsrslyd(8)\fR.
+
+.TP
+\fIenable (boolean)\fR
+Defines whether SRS address rewriting is enabled for this milter instance.
+Defaults to true.
+
+.TP
+\fIalways_rewrite (boolean)\fR
+Force the rewrite of the MAIL FROM address in messages reaching this milter
+instance.  This is useful for use with Postfix instances which run with the
+sole purpose of handling redirect messages.  If this parameter is set to
+true, the value of the `j' milter macro, which corresponds to the
+\fI$myhostname\fR configuration variable in Postfix, will be used as the SRS
+forward domain.
+
+.SH FILES
+
+.TP
+\fI/etc/srsly/conf.d/*.conf\fR
+Default location for milter instance configuration file.
+
+.SH SEE ALSO
+srsly(1), srslyd.conf(5), srslyd(8)
+
+.SH AUTHOR
+
+srsly was written by Andre Nathan.

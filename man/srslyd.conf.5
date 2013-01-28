@@ -83,24 +83,9 @@ as.  The \fIsrsly-milter\fR process will chroot to that user's home directory.
 Defaults to "srsly".
 
 .TP
-\fIlisten_address (string)\fR
-Defines the listen address for the milter service.  This parameter must follow
-the syntax of milter socket specifications, as indicated below.
-.TP
-.IP \(bu
-\fI{unix|local}:/path/to/file\fR
-\(em a named pipe.
-.IP \(bu
-\fIinet:port@{hostname|ip-address}\fR
-\(em an IPV4 socket.
-.IP \(bu
-\fIinet6:port@{hostname|ip-address}\fR
-\(em an IPV6 socket.
-
-.TP
-\fIdebug_level (integer)\fR
-Sets the milter debug level.  Must be an integer between 0 and 6.  Defaults to
-0.
+\fIconfig_path (string)\fR
+Defines the path where the milter instance configuration files reside.
+See \fIsrsly-milter.conf(5)\fR for details.  Defaults to "/etc/srsly/conf.d".
 
 .SS proxymap
 This section contains parameters that control how \fIsrslyd(8)\fR communicates
@@ -284,30 +269,6 @@ Defines the separator to be used when parsing multiple values in the
 \fIproxymap\fR result.  Defaults to /, */, that is, a comma optionally
 followed by any number of spaces.
 
-.SS spf
-This section contains SPF-specific parameters.
-
-.TP
-\fIfail_on_helo_temperror (boolean)\fR
-Defines whether a DNS temporary error condition will result in an SPF error
-response.  Defaults to true.
-
-.TP
-\fIlocal_whitelist (string list)\fR
-Defines a list of local IP addresses for which SPF verification will not be run.
-Defaults to ["127.0.0.0/8", "::ffff:127.0.0.0/104"].
-
-.TP
-\fIrelay_whitelist (string list)\fR
-Defines a list of IP addresses of trusted relays for which SPF verification
-will be skipped.  Defaults to [].
-
-.TP
-\fIresult_headers (string list)\fR
-Defines which SPF result headers will be added to the message by srsly after
-SPF verification.  This can be either "Authentication-Results", the older
-"Received-SPF" or both.  Defaults to ["Authentication-Results"].
-
 .SS srs
 This section defines the SRS settings used by \fIsrslyd(8)\fR.
 
@@ -343,13 +304,6 @@ Defines the length SRS hash, in days.  Defaults to 8.
 Defines the SRS separator character.  Valid separators are `=', `+' and `-'.
 Defaults to `='.
 
-.TP
-\fIforce_rewrite_from (string list)\fR
-Force the rewrite of the MAIL FROM address in messages coming from the
-specified addresses. The forward domain in this case will always be the
-value of the `j` milter macro, which corresponds to the \fI$myhostname\fR
-variable in Postfix.
-
 .SH FILES
 
 .TP
@@ -360,7 +314,7 @@ Default location for this file.
 Default location of the SRS secrets file.
 
 .SH SEE ALSO
-srsly(1), srslyd(8)
+srsly(1), srsly-milter.conf(5), srslyd(8)
 
 .SH AUTHOR
 
