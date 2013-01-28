@@ -15,4 +15,5 @@ val spf_relay_whitelist : unit -> Network.t list
 val spf_fail_on_helo_temperror : unit -> bool
 val spf_result_headers : unit -> string list
 
+val srs_enable : unit -> bool
 val srs_always_rewrite : unit -> bool

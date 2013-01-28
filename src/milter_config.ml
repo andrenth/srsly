@@ -14,7 +14,7 @@ type milter_config =
   }
 
 type spf_config =
-  { enable                 : bool
+  { spf_enable             : bool
   ; fail_on_helo_temperror : bool
   ; local_whitelist        : Network.t list
   ; relay_whitelist        : Network.t list
@@ -22,7 +22,9 @@ type spf_config =
   }
 
 type srs_config =
-  { always_rewrite : bool }
+  { srs_enable     : bool
+  ; always_rewrite : bool
+  }
 
 type t =
   { milter : milter_config
@@ -56,7 +58,7 @@ module Milter_defaults = struct
 end
 
 module SPF_defaults = struct
-  let enable = default_bool true
+  let spf_enable = default_bool true
   let fail_on_helo = default_bool true
   let local_whitelist = default_string_list local_addresses
   let relay_whitelist = default_string_list []
@@ -64,6 +66,7 @@ module SPF_defaults = struct
 end
 
 module SRS_defaults = struct
+  let srs_enable = default_bool true
   let always_rewrite = default_bool false
 end
 
@@ -77,7 +80,7 @@ let milter_spec =
 let spf_spec =
   let module D = SPF_defaults in
   `Section ("spf",
-    [ "enable", D.enable, [bool]
+    [ "enable", D.spf_enable, [bool]
     ; "fail_on_helo_temperror", D.fail_on_helo, [bool]
     ; "local_whitelist", D.local_whitelist, [string_list]
     ; "relay_whitelist", D.relay_whitelist, [string_list]
@@ -88,7 +91,9 @@ let spf_spec =
 let srs_spec =
   let module D = SRS_defaults in
   `Section ("srs",
-    ["always_rewrite", D.always_rewrite, [bool]])
+    [ "enable", D.srs_enable, [bool]
+    ; "always_rewrite", D.always_rewrite, [bool]
+    ])
 
 let spec =
   [ milter_spec
@@ -115,7 +120,7 @@ let make c =
     } in
   let spf_config =
     let get = find_spf in
-    { enable = bool_value (get "enable" c)
+    { spf_enable = bool_value (get "enable" c)
     ; fail_on_helo_temperror = bool_value (get "fail_on_helo_temperror" c)
     ; local_whitelist =
         network_list (string_list_value (get "local_whitelist" c))
@@ -125,7 +130,9 @@ let make c =
     } in
   let srs_config =
     let get = find_srs in
-    { always_rewrite = bool_value (get "always_rewrite" c) } in
+    { srs_enable = bool_value (get "enable" c)
+    ; always_rewrite = bool_value (get "always_rewrite" c)
+    } in
   { milter = milter_config
   ; spf    = spf_config
   ; srs    = srs_config
@@ -150,7 +157,7 @@ let milter_debug_level () =
   (current ()).milter.debug_level
 
 let spf_enable () =
-  (current ()).spf.enable
+  (current ()).spf.spf_enable
 
 let spf_fail_on_helo_temperror () =
   (current ()).spf.fail_on_helo_temperror
@@ -163,6 +170,9 @@ let spf_relay_whitelist () =
 
 let spf_result_headers () =
   (current ()).spf.result_headers
+
+let srs_enable () =
+  (current ()).srs.srs_enable
 
 let srs_always_rewrite () =
   (current ()).srs.always_rewrite

@@ -287,15 +287,17 @@ let eom ctx =
     (fun priv ->
       let from = O.some priv.from in
       let rcpts = priv.rcpts in
-      (if priv.is_bounce then
-        reverse_srs_signed_rcpts ctx rcpts
-      else if C.srs_always_rewrite () then
-        let myhostname = O.default "localhost" (Milter.getsymval ctx "j") in
-        srs_forward ctx from myhostname
-      else if is_remote_sender from then
-        match choose_forward_domain rcpts with
-        | None -> ()
-        | Some fwd -> srs_forward ctx from fwd);
+      if C.srs_enable () then begin
+        if priv.is_bounce then
+          reverse_srs_signed_rcpts ctx rcpts
+        else if C.srs_always_rewrite () then
+          let myhostname = O.default "localhost" (Milter.getsymval ctx "j") in
+          srs_forward ctx from myhostname
+        else if is_remote_sender from then
+          match choose_forward_domain rcpts with
+          | None -> ()
+          | Some fwd -> srs_forward ctx from fwd
+      end;
       match priv.result with
       | Whitelisted ((_, msg) as header) ->
           info "Whitelisted address: %s" msg;
