@@ -17,7 +17,6 @@ Executable "srslyd"
                    lwt.syntax (>= 2.4.0),
                    release,
                    release.config,
-                   srs,
                    str,
                    threads,
                    uint.uint32,
