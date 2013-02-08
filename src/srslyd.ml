@@ -37,7 +37,7 @@ let handle_sighup _ =
       lwt () = O.either warn_no_config reload_config (C.file ()) in
       signal_slaves sighup)
 
-let rec handle_sigusr1 _ =
+let handle_sigusr1 _ =
   Lwt.async
     (fun () ->
       lwt () = info "got SIGUSR1, reloading SRS secrets" in
