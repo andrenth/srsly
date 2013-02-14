@@ -110,7 +110,7 @@ let expire () =
         lwt st = Lwt_unix.lstat path in
         let mtime = st.Lwt_unix.st_mtime in
         if Unix.time () -. mtime > max_age then
-          lwt () = info "removing expired secret in %s" path in
+          lwt () = notice "removing expired secret in %s" path in
           Lwt_unix.unlink path
         else
           debug "secret in %s still not expired" path

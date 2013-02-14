@@ -94,13 +94,13 @@ let proxymap_choose_forward_domain fd =
 let handle_sighup fd _ =
   Lwt.async
     (fun () ->
-      lwt () = info "got SIGHUP, asking for configuration" in
+      lwt () = notice "got SIGHUP, asking for configuration" in
       read_configuration fd)
 
 let handle_sigusr1 fd _ =
   Lwt.async
     (fun () ->
-      lwt () = info "got SIGUSR1, asking for SRS secrets" in
+      lwt () = notice "got SIGUSR1, asking for SRS secrets" in
       read_srs_secrets fd)
 
 let flags =

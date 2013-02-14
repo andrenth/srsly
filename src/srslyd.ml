@@ -31,7 +31,7 @@ let reload_config file =
   return_unit
 
 let handle_sighup _ =
-  ignore_result (info "got SIGHUP, reloading configuration");
+  ignore_result (notice "got SIGHUP, reloading configuration");
   Lwt.async
     (fun () ->
       lwt () = O.either warn_no_config reload_config (C.file ()) in
@@ -40,7 +40,7 @@ let handle_sighup _ =
 let handle_sigusr1 _ =
   Lwt.async
     (fun () ->
-      lwt () = info "got SIGUSR1, reloading SRS secrets" in
+      lwt () = notice "got SIGUSR1, reloading SRS secrets" in
       signal_slaves sigusr1)
 
 let instance_config_file instance =
@@ -50,7 +50,7 @@ let slave_ipc_handler fd =
   lwt () = debug "received IPC request from slave" in
   let handler = function
     | Configuration_request instance ->
-        lwt () = info "sending configuration to instance %s" instance in
+        lwt () = notice "sending configuration to instance %s" instance in
         lwt () = Milter_config.load (instance_config_file instance) in
         return (Configuration (C.current (), Milter_config.current ()))
     | Check_remote_sender s ->
@@ -62,7 +62,7 @@ let slave_ipc_handler fd =
         lwt fwd = Proxymap.choose_forward_domain rcpts in
         return (SRS_forward_domain fwd)
     | SRS_secrets_request ->
-        lwt () = info "sending SRS secrets to slave" in
+        lwt () = notice "sending SRS secrets to slave" in
         lwt secrets = Srs_util.read_srs_secrets () in
         return (SRS_secrets secrets) in
   Ipc.Slave.Server.handle_request fd handler
