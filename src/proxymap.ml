@@ -5,8 +5,7 @@ open Log_lwt
 open Util
 
 module O = Release_util.Option
-module B = Release_buffer.String
-module Io = Release_io.Make (B)
+module B = Release_buffer
 module C = Srslyd_config
 
 let replace_formats =
@@ -23,7 +22,7 @@ let alloc_read fd =
   let rec read buf =
     let siz = B.size buf in
     let len = B.length buf in
-    lwt n = Io.read_once fd buf len (siz - len) in
+    lwt n = Release_io.read_once fd buf len (siz - len) in
     if len + n = siz then begin
       let buf' = B.create (siz * 2) in
       B.add_buffer buf' buf;
@@ -36,7 +35,7 @@ let make_request socket req =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
   try_lwt
     lwt () = Lwt_unix.connect fd (Unix.ADDR_UNIX socket) in
-    lwt () = Io.write fd (B.of_string req) in
+    lwt () = Release_io.write fd (B.of_string req) in
     lwt buf = alloc_read fd in
     lwt () = Lwt_unix.close fd in
     let n = B.length buf in
