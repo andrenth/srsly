@@ -24,6 +24,8 @@ pre-start script
   lpath=/lib
   if [ "`uname -m`" = "x86_64" -a -d "$lpath/x86_64-linux-gnu" ]; then
     lpath=$lpath/x86_64-linux-gnu
+  else
+    lpath=$lpath/i386-linux-gnu
   fi
   libs="$lpath/libresolv*.so $lpath/libnss_dns*.so $lpath/libgcc_s.so.1"
   for src in $libs; do
