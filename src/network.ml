@@ -1,3 +1,5 @@
+open Stdint
+
 type t = Unix.inet_addr * int
 
 exception Network_error of string

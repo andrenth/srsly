@@ -18,7 +18,7 @@ let applyn f x n =
 let set_log_level level =
   Lwt_log.Section.set_level Lwt_log.Section.main level
 
-let fail_lwt s = raise_lwt (Failure s)
+let fail_lwt s = Lwt.fail (Failure s)
 
 let join_strings = function
   | [] -> ""

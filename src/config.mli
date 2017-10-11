@@ -1,7 +1,9 @@
+open Release_lwt
+
 module type Spec = sig
   type config
-  val spec : Release_config.spec
-  val make : Release_config.t -> config
+  val spec : Release.Config.spec
+  val make : Release.Config.t -> config
 end
 
 module type S = sig

@@ -1,8 +1,9 @@
 # OASIS_START
-# DO NOT EDIT (digest: c17bae406866631c88f1ab81e8aa3cf5)
-# Ignore VCS directories, you can use the same kind of rule outside 
-# OASIS_START/STOP if you want to exclude directories that contains 
+# DO NOT EDIT (digest: 4ae33e71b2e2aed7519bcd8940dfbd81)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
+true: annot, bin_annot
 <**/.svn>: -traverse
 <**/.svn>: not_hygienic
 ".bzr": -traverse
@@ -15,62 +16,51 @@
 "_darcs": not_hygienic
 # Executable srslyd
 <src/srslyd.{native,byte}>: pkg_lwt
+<src/srslyd.{native,byte}>: pkg_lwt.preemptive
 <src/srslyd.{native,byte}>: pkg_lwt.unix
-<src/srslyd.{native,byte}>: pkg_lwt.syntax
 <src/srslyd.{native,byte}>: pkg_release
-<src/srslyd.{native,byte}>: pkg_release.config
+<src/srslyd.{native,byte}>: pkg_release.lwt
 <src/srslyd.{native,byte}>: pkg_srs
+<src/srslyd.{native,byte}>: pkg_stdint
 <src/srslyd.{native,byte}>: pkg_str
 <src/srslyd.{native,byte}>: pkg_threads
-<src/srslyd.{native,byte}>: pkg_uint.uint32
-<src/srslyd.{native,byte}>: pkg_uint.uint128
-<src/srslyd.{native,byte}>: pkg_lwt.preemptive
 # Executable srsly-milter
 <src/srsly_milter.{native,byte}>: pkg_lwt
+<src/srsly_milter.{native,byte}>: pkg_lwt.preemptive
 <src/srsly_milter.{native,byte}>: pkg_lwt.unix
-<src/srsly_milter.{native,byte}>: pkg_lwt.syntax
 <src/srsly_milter.{native,byte}>: pkg_milter
 <src/srsly_milter.{native,byte}>: pkg_release
-<src/srsly_milter.{native,byte}>: pkg_release.config
+<src/srsly_milter.{native,byte}>: pkg_release.lwt
 <src/srsly_milter.{native,byte}>: pkg_spf
 <src/srsly_milter.{native,byte}>: pkg_srs
+<src/srsly_milter.{native,byte}>: pkg_stdint
 <src/srsly_milter.{native,byte}>: pkg_str
 <src/srsly_milter.{native,byte}>: pkg_threads
-<src/srsly_milter.{native,byte}>: pkg_uint.uint32
-<src/srsly_milter.{native,byte}>: pkg_uint.uint128
 <src/srsly_milter.{native,byte}>: pkg_unix
-<src/srsly_milter.{native,byte}>: pkg_lwt.preemptive
-<src/*.ml{,i}>: pkg_lwt.preemptive
+<src/*.ml{,i,y}>: pkg_lwt.preemptive
 # Executable srsly
 <src/srsly.{native,byte}>: pkg_lwt
 <src/srsly.{native,byte}>: pkg_lwt.unix
-<src/srsly.{native,byte}>: pkg_lwt.syntax
 <src/srsly.{native,byte}>: pkg_milter
 <src/srsly.{native,byte}>: pkg_release
-<src/srsly.{native,byte}>: pkg_release.config
-<src/srsly.{native,byte}>: pkg_release.util
+<src/srsly.{native,byte}>: pkg_release.lwt
 <src/srsly.{native,byte}>: pkg_spf
 <src/srsly.{native,byte}>: pkg_srs
+<src/srsly.{native,byte}>: pkg_stdint
 <src/srsly.{native,byte}>: pkg_str
 <src/srsly.{native,byte}>: pkg_threads
-<src/srsly.{native,byte}>: pkg_uint.uint32
-<src/srsly.{native,byte}>: pkg_uint.uint128
 <src/srsly.{native,byte}>: pkg_unix
-<src/*.ml{,i}>: pkg_lwt
-<src/*.ml{,i}>: pkg_lwt.unix
-<src/*.ml{,i}>: pkg_lwt.syntax
-<src/*.ml{,i}>: pkg_milter
-<src/*.ml{,i}>: pkg_release
-<src/*.ml{,i}>: pkg_release.config
-<src/*.ml{,i}>: pkg_release.util
-<src/*.ml{,i}>: pkg_spf
-<src/*.ml{,i}>: pkg_srs
-<src/*.ml{,i}>: pkg_str
-<src/*.ml{,i}>: pkg_threads
-<src/*.ml{,i}>: pkg_uint.uint32
-<src/*.ml{,i}>: pkg_uint.uint128
-<src/*.ml{,i}>: pkg_unix
+<src/*.ml{,i,y}>: pkg_lwt
+<src/*.ml{,i,y}>: pkg_lwt.unix
+<src/*.ml{,i,y}>: pkg_milter
+<src/*.ml{,i,y}>: pkg_release
+<src/*.ml{,i,y}>: pkg_release.lwt
+<src/*.ml{,i,y}>: pkg_spf
+<src/*.ml{,i,y}>: pkg_srs
+<src/*.ml{,i,y}>: pkg_stdint
+<src/*.ml{,i,y}>: pkg_str
+<src/*.ml{,i,y}>: pkg_threads
+<src/*.ml{,i,y}>: pkg_unix
 # OASIS_STOP
 <*/*.ml>: annot
 <*/*.ml>: warn_error_A
-<src/*.ml>: syntax_camlp4o

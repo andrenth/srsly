@@ -1,10 +1,11 @@
 open Lwt
 open Printf
+open Release_lwt
 
 open Log_preemptive
 open Util
 
-module O = Release_util.Option
+module O = Release.Util.Option
 module C = Milter_config
 
 type result

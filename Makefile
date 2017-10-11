@@ -1,8 +1,46 @@
-all:
-	ocaml setup.ml -configure
-	ocaml setup.ml -build
+# OASIS_START
+# DO NOT EDIT (digest: a3c674b4239234cbbe53afe090018954)
 
-install:
+SETUP = ocaml setup.ml
+
+build: setup.data
+	$(SETUP) -build $(BUILDFLAGS)
+
+doc: setup.data build
+	$(SETUP) -doc $(DOCFLAGS)
+
+test: setup.data build
+	$(SETUP) -test $(TESTFLAGS)
+
+all:
+	$(SETUP) -all $(ALLFLAGS)
+
+install: setup.data
+	$(SETUP) -install $(INSTALLFLAGS)
+
+uninstall: setup.data
+	$(SETUP) -uninstall $(UNINSTALLFLAGS)
+
+reinstall: setup.data
+	$(SETUP) -reinstall $(REINSTALLFLAGS)
+
+clean:
+	$(SETUP) -clean $(CLEANFLAGS)
+
+distclean:
+	$(SETUP) -distclean $(DISTCLEANFLAGS)
+
+setup.data:
+	$(SETUP) -configure $(CONFIGUREFLAGS)
+
+configure:
+	$(SETUP) -configure $(CONFIGUREFLAGS)
+
+.PHONY: build doc test all install uninstall reinstall clean distclean configure
+
+# OASIS_STOP
+
+sys-install:
 	groupadd --system srsly
 	useradd                     \
 		--system                  \
@@ -28,15 +66,9 @@ install:
 	chmod 0600 /etc/srsly/srs_secret
 	srsly new-secret > /etc/srsly/srs_secret
 
-uninstall:
+sys-uninstall:
 	rm -r /etc/srsly
 	rm -r /usr/lib/srsly
 	rm -r /var/lib/srsly
 	rm /usr/sbin/srsly
 	userdel srsly
-
-clean:
-	ocaml setup.ml -clean
-
-distclean:
-	ocaml setup.ml -distclean

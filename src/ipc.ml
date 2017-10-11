@@ -1,6 +1,7 @@
 open Printf
+open Release_lwt
 
-module O = Release_util.Option
+module O = Release.Util.Option
 
 module Slave_types = struct
   type request
@@ -51,7 +52,7 @@ module Slave_ops = struct
     | other -> failwith (sprintf "unexpected response = '%c'" other)
 end
 
-module Slave = Release_ipc.Make (Slave_ops)
+module Slave = Release.IPC.Make (Slave_ops)
 
 module Control_types = struct
   type request
@@ -96,4 +97,4 @@ module Control_ops = struct
     | other -> failwith (sprintf "unexpected response: '%s'" other)
 end
 
-module Control = Release_ipc.Make (Control_ops)
+module Control = Release.IPC.Make (Control_ops)

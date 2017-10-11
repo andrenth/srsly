@@ -1,11 +1,12 @@
 open Lwt
 open Printf
+open Release_lwt
 
 open Log_lwt
 open Util
 
-module O = Release_util.Option
-module B = Release_buffer
+module O = Release.Util.Option
+module B = Release.Buffer
 module C = Srslyd_config
 
 let replace_formats =
@@ -22,7 +23,7 @@ let alloc_read fd =
   let rec read buf =
     let siz = B.size buf in
     let len = B.length buf in
-    lwt n = Release_io.read_once fd buf len (siz - len) in
+    Release.IO.read_once fd buf len (siz - len) >>= fun n ->
     if len + n = siz then begin
       let buf' = B.create (siz * 2) in
       B.add_buffer buf' buf;
@@ -33,22 +34,23 @@ let alloc_read fd =
 
 let make_request socket req =
   let fd = Lwt_unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
-  try_lwt
-    lwt () = Lwt_unix.connect fd (Unix.ADDR_UNIX socket) in
-    lwt () = Release_io.write fd (B.of_string req) in
-    lwt buf = alloc_read fd in
-    lwt () = Lwt_unix.close fd in
-    let n = B.length buf in
-    return (B.to_string (B.sub buf 0 n))
-  with
-  | Unix.Unix_error (e, _, _) ->
-      lwt () = Lwt_unix.close fd in
-      let err = Unix.error_message e in
-      raise_lwt (Failure (sprintf "Proxymap.make_request: connect: %s" err))
-  | e ->
-      lwt () = Lwt_unix.close fd in
-      let bt = Printexc.to_string e in
-      raise_lwt (Failure (sprintf "Proxymap.make_request: %s" bt))
+  Lwt.catch
+    (fun () ->
+      Lwt_unix.connect fd (Unix.ADDR_UNIX socket) >>= fun () ->
+      Release.IO.write fd (B.of_string req) >>= fun () ->
+      alloc_read fd >>= fun buf ->
+      Lwt_unix.close fd >>= fun () ->
+      let n = B.length buf in
+      return (B.to_string (B.sub buf 0 n)))
+    (function
+    | Unix.Unix_error (e, _, _) ->
+        Lwt_unix.close fd >>= fun () ->
+        let err = Unix.error_message e in
+        fail_lwt (sprintf "Proxymap.make_request: connect: %s" err)
+    | e ->
+        Lwt_unix.close fd >>= fun () ->
+        let bt = Printexc.to_string e in
+        fail_lwt (sprintf "Proxymap.make_request: %s" bt))
 
 type status
   = Ok of string list
@@ -121,7 +123,7 @@ let query key table =
   let res_fmt = C.proxymap_result_format () in
   let sep = C.proxymap_result_value_separator () in
   let req = build_request query_fmt table flags key in
-  lwt raw_res = make_request socket req in
+  make_request socket req >>= fun raw_res ->
   return (parse_result raw_res res_fmt sep)
 
 (*
@@ -142,28 +144,28 @@ let query_with f key table max_depth max_results acc =
   let rec resolve keys max_depth max_res acc =
     match keys with
     | [] ->
-        lwt () = debug "no more keys, returning" in
+        debug "no more keys, returning" >>= fun () ->
         return (max_res, acc)
     | k::rest ->
         if max_res = 0 then
-          lwt () = error "too many results querying for %s in %s" key table in
+          error "too many results querying for %s in %s" key table >>= fun () ->
           return (0, acc)
         else if max_depth < 0 then
-          lwt () = error "maximum depth reached in %s for %s" table key in
+          error "maximum depth reached in %s for %s" table key >>= fun () ->
           resolve rest max_depth max_res acc
         else
-          lwt () = debug "querying key %s" k in
-          match_lwt query k table with
+          debug "querying key %s" k >>= fun () ->
+          query k table >>= function
           | Ok values ->
-              lwt max, acc = resolve values (max_depth - 1) max_res acc in
+              resolve values (max_depth - 1) max_res acc >>= fun (max, acc) ->
               resolve rest max_depth max acc
           | Key_not_found ->
-              lwt () = debug "no redirects found for %s" k in
-              lwt max, acc = f key k max_res acc in
+              debug "no redirects found for %s" k >>= fun () ->
+              f key k max_res acc >>= fun (max, acc) ->
               resolve rest max_depth max acc
           | other ->
               let e = string_of_status other in
-              lwt () = error "error querying %s for %s: %s" table key e in
+              error "error querying %s for %s: %s" table key e >>= fun () ->
               resolve rest max_depth max_res acc in
   resolve [key] max_depth max_results acc
 
@@ -198,13 +200,13 @@ let is_remote_sender sender =
   let key = proxymap_key fmt sender in
   let max_depth = C.proxymap_sender_query_max_depth () in
   let max_res = C.proxymap_sender_query_max_results () in
-  lwt () = debug "is_remote_sender: querying for %s" key in
+  debug "is_remote_sender: querying for %s" key >>= fun () ->
   let is_remote _ sender max res =
     if not (sender =~ local_re) then
       return (max-1, true)
     else
       return (max-1, res) in
-  lwt _, res = query_with is_remote key table max_depth max_res false in
+  query_with is_remote key table max_depth max_res false >>= fun (_, res) ->
   return res
 
 module RcptSet = Set.Make(struct
@@ -257,13 +259,14 @@ let visit_rcpt local_re orig_rcpt final_rcpt max_res (rcpts, counts) =
         max_res - 1, RcptSet.add final_rcpt rcpts
       else
         max_res, rcpts in
-    lwt counts =
+    begin
       if not (final_rcpt =~ local_re) then
-        lwt () = debug "%s is remote" final_rcpt in
+        debug "%s is remote" final_rcpt >>= fun () ->
         return (map_incr orig_rcpt counts)
       else
-        lwt () = debug "%s is local" final_rcpt in
-        return counts in
+        debug "%s is local" final_rcpt >>= fun () ->
+        return counts
+    end >>= fun counts ->
     return (max, (rcpts, counts))
   end else
     return (max_res, (rcpts, counts))
@@ -282,22 +285,21 @@ let choose_forward_domain orig_rcpts =
   let num_rcpts = List.length orig_rcpts in
   let max_res =
     num_rcpts * C.proxymap_recipient_query_max_results () in
-  lwt _, _, counts =
-    Lwt_list.fold_left_s
-      (fun (max_res, rcpts, counts) rcpt ->
-        let key = proxymap_key fmt rcpt in
-        lwt () = debug "choose_forward_domain: querying for %s" key in
-        lwt max_res', (rcpts', counts') =
-          query_with
-            (visit_rcpt re)
-            key
-            table
-            max_depth
-            max_res
-            (rcpts, counts) in
-        return (max_res', rcpts', counts'))
-      (max_res, RcptSet.empty, RcptMap.empty)
-      orig_rcpts in
+  Lwt_list.fold_left_s
+    (fun (max_res, rcpts, counts) rcpt ->
+      let key = proxymap_key fmt rcpt in
+      debug "choose_forward_domain: querying for %s" key >>= fun () ->
+      query_with
+        (visit_rcpt re)
+        key
+        table
+        max_depth
+        max_res
+        (rcpts, counts) >>= fun (max_res', (rcpts', counts')) ->
+      return (max_res', rcpts', counts'))
+    (max_res, RcptSet.empty, RcptMap.empty)
+    orig_rcpts
+  >>= fun (_, _, counts) ->
   if counts <> RcptMap.empty then
     return (Some (weighted_sample counts))
   else

@@ -1,12 +1,14 @@
 open Lwt
 open Printf
-open Release_config_values
-open Release_config_validations
+open Release_lwt
+open Release.Config.Value
+open Release.Config.Validation
 
 open Log_lwt
 open Util
 
-module O = Release_util.Option
+module O = Release.Util.Option
+module Value = Release.Config.Value
 
 type milter_config =
   { listen_address : string
@@ -39,35 +41,55 @@ let local_addresses =
 
 let socket_string = function
   | `Str s ->
-      if Str.string_match (Str.regexp "^\\(unix\\|local\\):\\(.+\\)") s 0 then
+      let unix_re = Str.regexp "^\\(unix\\|local\\):\\(.+\\)" in
+      let inet_re = Str.regexp "^inet\\(6?\\):[0-9]+@\\(.+\\)" in
+      let ipv4_re = Str.regexp "^\\(?:[0-9]{1,3}\\.\\){3}[0-9]{1,3}$" in
+      let hextet = "[A-Fa-f0-9]?[A-Fa-f0-9]?[A-Fa-f0-9]?[A-Fa-f0-9]?" in
+      let ipv6_re = Str.regexp ("^\\(:?" ^ hextet ^ "\\)*:" ^ hextet ^ "$") in
+      if Str.string_match unix_re s 0 then
         existing_dirname (`Str (Str.matched_group 1 s))
-      else if Str.string_match (Str.regexp "^inet6?:[0-9]+@\\(.+\\)") s 0 then
-        try
-          ignore (Unix.gethostbyname (Str.matched_group 1 s));
-          `Valid
-        with _ ->
-          `Invalid "socket_string: invalid hostname or address"
-      else
+      else if Str.string_match inet_re s 0 then begin
+        let domain =
+          if Str.matched_group 1 s = ""
+          then Unix.PF_INET
+          else Unix.PF_INET6 in
+        let host = Str.matched_group 2 s in
+        let is_ip =
+          Str.string_match ipv4_re host 0 || Str.string_match ipv6_re host 0 in
+        if is_ip then begin
+          try
+            let sockaddr = Unix.ADDR_INET (Unix.inet_addr_of_string host, 0) in
+            ignore (Unix.getnameinfo sockaddr [Unix.NI_NAMEREQD]);
+            Printf.printf ">>>>>>>>>>>>>>>>>>>>>>>>>>> %s is valid\n%!" host;
+            `Valid
+          with Not_found ->
+            `Invalid "socket_string: invalid IP address"
+        end else begin
+          match Unix.getaddrinfo host "0" [Unix.AI_FAMILY domain] with
+          | [] -> `Invalid "socket_string: invalid name"
+          | _ -> `Valid
+        end
+      end else
         `Invalid "socket_string: invalid socket string"
   | _ ->
       invalid_arg "socket_string: not a string"
 
 module Milter_defaults = struct
-  let listen_address = default_string "inet:8387@localhost"
-  let debug_level = default_int 0
+  let listen_address = Default.string "inet:8387@localhost"
+  let debug_level = Default.int 0
 end
 
 module SPF_defaults = struct
-  let spf_enable = default_bool true
-  let fail_on_helo = default_bool true
-  let local_whitelist = default_string_list local_addresses
-  let relay_whitelist = default_string_list []
-  let result_headers = default_string_list ["Authentication-Results"]
+  let spf_enable = Default.bool true
+  let fail_on_helo = Default.bool true
+  let local_whitelist = Default.string_list local_addresses
+  let relay_whitelist = Default.string_list []
+  let result_headers = Default.string_list ["Authentication-Results"]
 end
 
 module SRS_defaults = struct
-  let srs_enable = default_bool true
-  let always_rewrite = default_bool false
+  let srs_enable = Default.bool true
+  let always_rewrite = Default.bool false
 end
 
 let milter_spec =
@@ -102,36 +124,36 @@ let spec =
   ]
 
 let find_milter key conf =
-  Release_config.get conf "milter" key
+  Release.Config.get conf "milter" key
 
 let find_spf key conf =
-  Release_config.get conf "spf" key
+  Release.Config.get conf "spf" key
 
 let find_srs key conf =
-  Release_config.get conf "srs" key
+  Release.Config.get conf "srs" key
 
 let network_list = List.map Network.of_string
 
 let make c =
   let milter_config =
     let get = find_milter in
-    { listen_address = string_value (get "listen_address" c)
-    ; debug_level    = int_value (get "debug_level" c)
+    { listen_address = Value.to_string (get "listen_address" c)
+    ; debug_level    = Value.to_int (get "debug_level" c)
     } in
   let spf_config =
     let get = find_spf in
-    { spf_enable = bool_value (get "enable" c)
-    ; fail_on_helo_temperror = bool_value (get "fail_on_helo_temperror" c)
+    { spf_enable = Value.to_bool (get "enable" c)
+    ; fail_on_helo_temperror = Value.to_bool (get "fail_on_helo_temperror" c)
     ; local_whitelist =
-        network_list (string_list_value (get "local_whitelist" c))
+        network_list (Value.to_string_list (get "local_whitelist" c))
     ; relay_whitelist =
-        network_list (string_list_value (get "relay_whitelist" c))
-    ; result_headers = string_list_value (get "result_headers" c)
+        network_list (Value.to_string_list (get "relay_whitelist" c))
+    ; result_headers = Value.to_string_list (get "result_headers" c)
     } in
   let srs_config =
     let get = find_srs in
-    { srs_enable = bool_value (get "enable" c)
-    ; always_rewrite = bool_value (get "always_rewrite" c)
+    { srs_enable = Value.to_bool (get "enable" c)
+    ; always_rewrite = Value.to_bool (get "always_rewrite" c)
     } in
   { milter = milter_config
   ; spf    = spf_config

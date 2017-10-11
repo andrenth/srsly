@@ -1,12 +1,13 @@
 open Lwt
 open Printf
+open Release_lwt
 
 open Ipc.Control_types
 open Ipc.Slave_types
 open Log_lwt
 open Util
 
-module O = Release_util.Option
+module O = Release.Util.Option
 module C = Srslyd_config
 
 let slave_connections = ref (fun () -> [])
@@ -26,7 +27,7 @@ let warn_no_config () =
   warning "no configuration file given; try `srsly reload` to set one"
 
 let reload_config file =
-  lwt () = C.load file in
+  C.load file >>= fun () ->
   set_log_level (C.srslyd_log_level ());
   return_unit
 
@@ -34,36 +35,36 @@ let handle_sighup _ =
   ignore_result (notice "got SIGHUP, reloading configuration");
   Lwt.async
     (fun () ->
-      lwt () = O.either warn_no_config reload_config (C.file ()) in
+      O.either warn_no_config reload_config (C.file ()) >>= fun () ->
       signal_slaves sighup)
 
 let handle_sigusr1 _ =
   Lwt.async
     (fun () ->
-      lwt () = notice "got SIGUSR1, reloading SRS secrets" in
+      notice "got SIGUSR1, reloading SRS secrets" >>= fun () ->
       signal_slaves sigusr1)
 
 let instance_config_file instance =
   sprintf "%s/%s.conf" (C.milter_config_path ()) instance
 
 let slave_ipc_handler fd =
-  lwt () = debug "received IPC request from slave" in
+  debug "received IPC request from slave" >>= fun () ->
   let handler = function
     | Configuration_request instance ->
-        lwt () = notice "sending configuration to instance %s" instance in
-        lwt () = Milter_config.load (instance_config_file instance) in
+        notice "sending configuration to instance %s" instance >>= fun () ->
+        Milter_config.load (instance_config_file instance) >>= fun () ->
         return (Configuration (C.current (), Milter_config.current ()))
     | Check_remote_sender s ->
-        lwt () = debug "proxymap remote sender check for '%s'" s in
-        lwt r = Proxymap.is_remote_sender s in
+        debug "proxymap remote sender check for '%s'" s >>= fun () ->
+        Proxymap.is_remote_sender s >>= fun r ->
         return (Remote_sender_check r)
     | Choose_srs_forward_domain rcpts ->
-        lwt () = debug "proxymap final destination count request" in
-        lwt fwd = Proxymap.choose_forward_domain rcpts in
+        debug "proxymap final destination count request" >>= fun () ->
+        Proxymap.choose_forward_domain rcpts >>= fun fwd ->
         return (SRS_forward_domain fwd)
     | SRS_secrets_request ->
-        lwt () = notice "sending SRS secrets to slave" in
-        lwt secrets = Srs_util.read_srs_secrets () in
+        notice "sending SRS secrets to slave" >>= fun () ->
+        Srs_util.read_srs_secrets () >>= fun secrets ->
         return (SRS_secrets secrets) in
   Ipc.Slave.Server.handle_request fd handler
 
@@ -71,22 +72,23 @@ let control_connection_handler fd =
   let handler = function
     | Reload_config file ->
         let reload file =
-          lwt () = notice "reloading configuration at %s" file in
-          lwt () = reload_config file in
+          notice "reloading configuration at %s" file >>= fun () ->
+          reload_config file >>= fun () ->
           signal_slaves sighup in
         let config_file = O.choose file (C.file ()) in
-        lwt () = O.either warn_no_config reload config_file in
+        O.either warn_no_config reload config_file >>= fun () ->
         return Reloaded_config
     | Reload_secrets ->
-        lwt () = notice "reloading SRS secrets" in
-        lwt () = signal_slaves sigusr1 in
+        notice "reloading SRS secrets" >>= fun () ->
+        signal_slaves sigusr1 >>= fun () ->
         return Reloaded_secrets
     | Stop ->
-        lwt () = notice "received stop command" in
+        notice "received stop command" >>= fun () ->
         (* Suicide. Release will catch SIGTERM and kill the slaves *)
         Unix.kill (Unix.getpid ()) sigterm;
-        lwt () = Lwt_unix.sleep 1.0 in (* give the signal handler time to run *)
-        raise_lwt (Failure "I'm already dead!") in
+        (* Give the signal handler time to run *)
+        Lwt_unix.sleep 1.0 >>= fun () ->
+        fail_lwt "I'm already dead!" in
   Ipc.Control.Server.handle_request ~eof_warning:false ~timeout:5. fd handler
 
 let filter_dir f dir =
@@ -98,12 +100,12 @@ let filter_dir f dir =
 
 let milter_config_files () =
   let dir = C.milter_config_path () in
-  lwt files =
-    filter_dir
-      (fun e -> e.[0] <> '.' && Filename.check_suffix e ".conf")
-      dir in
+  filter_dir
+    (fun e -> e.[0] <> '.' && Filename.check_suffix e ".conf")
+    dir
+  >>= fun files ->
   if files = [] then
-    lwt () = error "no milter configuration file(s) found" in
+    error "no milter configuration file(s) found" >>= fun () ->
     exit 1
   else
     return files
@@ -120,9 +122,9 @@ let () =
     if Array.length Sys.argv > 1 then Some Sys.argv.(1)
     else None in
   let config_t =
-    lwt () = O.either C.load_defaults C.load config_file in
-    lwt cfgs = milter_config_files () in
-    lwt () = notice "number of instances: %d" (List.length cfgs) in
+    O.either C.load_defaults C.load config_file >>= fun () ->
+    milter_config_files () >>= fun cfgs ->
+    notice "number of instances: %d" (List.length cfgs) >>= fun () ->
     return cfgs in
   let milter_configs = Lwt_main.run config_t in
   set_log_level (C.srslyd_log_level ());
@@ -139,10 +141,10 @@ let () =
     milter_configs in
   let background = C.srslyd_background () in
   Release.master_slaves
-    ~syslog:background
-    ~background:background
+    ~logger:Future.Logger.syslog
+    ~background
     ~lock_file:(C.srslyd_lock_file ())
     ~control:(C.srslyd_control_socket (), control_connection_handler)
-    ~main:main
-    ~slaves:slaves
+    ~main
+    ~slaves
     ()

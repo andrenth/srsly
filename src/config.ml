@@ -1,17 +1,19 @@
 open Lwt
 open Printf
-open Release_config_values
-open Release_config_validations
+open Release_lwt
+
+open Release.Config.Value
+open Release.Config.Validation
 
 open Log_lwt
 open Util
 
-module O = Release_util.Option
+module O = Release.Util.Option
 
 module type Spec = sig
   type config
-  val spec : Release_config.spec
-  val make : Release_config.t -> config
+  val spec : Release.Config.spec
+  val make : Release.Config.t -> config
 end
 
 module type S = sig
@@ -34,27 +36,29 @@ module Make (S : Spec) : S with type t = S.config = struct
 
   let load file =
     let err fmt =
-      ksprintf (fun s -> lwt () = error "%s" s in exit 1) fmt in
-    try_lwt
-      lwt st = Lwt_unix.lstat file in
-      if st.Lwt_unix.st_kind = Lwt_unix.S_REG then
-        match_lwt Release_config.parse file S.spec with
-        | `Configuration conf ->
-            config_file := Some file;
-            configuration := Some (S.make conf);
-            return_unit
-        | `Error e ->
-            err "%s" e
-      else
-        err "%s: not a regular file" file
-    with
-    | Unix.Unix_error (e, _, _) ->
-        err "%s: %s" file (Unix.error_message e)
-    | Network.Network_error e ->
-        err "%s: %s" file e
+      ksprintf (fun s -> error "%s" s >>= fun () -> exit 1) fmt in
+    Lwt.catch
+      (fun () ->
+        Lwt_unix.lstat file >>= fun st ->
+        if st.Lwt_unix.st_kind = Lwt_unix.S_REG then
+          Release.Config.parse file S.spec >>= function
+          | `Configuration conf ->
+              config_file := Some file;
+              configuration := Some (S.make conf);
+              return_unit
+          | `Error e ->
+              err "%s" e
+        else
+          err "%s: not a regular file" file)
+      (function
+      | Unix.Unix_error (e, _, _) ->
+          err "%s: %s" file (Unix.error_message e)
+      | Network.Network_error e ->
+          err "%s: %s" file e
+      | e -> err "%s: %s" file (Printexc.to_string e))
 
   let load_defaults () =
-    configuration := Some (S.make (Release_config.defaults S.spec));
+    configuration := Some (S.make (Release.Config.defaults S.spec));
     return_unit
 
   let current () =

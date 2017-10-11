@@ -1,5 +1,6 @@
 open Lwt
 open Printf
+open Release_lwt
 
 open Ipc.Slave_types
 open Log_lwt
@@ -15,15 +16,15 @@ let instance_name = ref ""
 let ipc_lock = Lwt_mutex.create ()
 
 let ipc_error = function
-  | `EOF -> error "EOF on IPC socket" >> exit 1
-  | `Timeout -> error "timeout on IPC socket" >> exit 1
+  | `EOF -> error "EOF on IPC socket" >>= fun () -> exit 1
+  | `Timeout -> error "timeout on IPC socket" >>= fun () -> exit 1
 
 let read_configuration fd =
   Lwt_mutex.with_lock ipc_lock
     (fun () ->
       let handle_ipc = function
         | `Response (Configuration (sc, mc)) ->
-            lwt () = notice "received a new configuration; replacing" in
+            notice "received a new configuration; replacing" >>= fun () ->
             S_conf.replace sc;
             M_conf.replace mc;
             set_log_level (S_conf.srslyd_log_level ());
@@ -41,9 +42,8 @@ let read_srs_secrets fd =
     (fun () ->
       let handle_ipc = function
         | `Response (SRS_secrets ss) ->
-            lwt () =
-              notice "instance %s received new SRS secrets; reloading"
-                !instance_name in
+            notice "instance %s received new SRS secrets; reloading"
+              !instance_name >>= fun () ->
             Milter_srs.reload ss;
             return_unit
         | `EOF | `Timeout as e ->
@@ -65,7 +65,7 @@ let proxymap_is_remote_sender fd =
   let handle_ipc = function
     | `Response (Remote_sender_check b) ->
         let s = if b then "remote" else "local" in
-        lwt () = debug "received proxymap response: sender is %s" s in
+        debug "received proxymap response: sender is %s" s >>= fun () ->
         return b
     | `EOF | `Timeout as e ->
         ipc_error e
@@ -79,8 +79,8 @@ let proxymap_is_remote_sender fd =
 let proxymap_choose_forward_domain fd =
   let handle_ipc = function
     | `Response (SRS_forward_domain d) ->
-        lwt () = debug "received proxymap SRS forward domain: %s"
-          (match d with None -> "none" | Some x -> x) in
+        debug "received proxymap SRS forward domain: %s"
+          (match d with None -> "none" | Some x -> x) >>= fun () ->
         return d
     | `EOF | `Timeout as e ->
         ipc_error e
@@ -94,13 +94,13 @@ let proxymap_choose_forward_domain fd =
 let handle_sighup fd _ =
   Lwt.async
     (fun () ->
-      lwt () = notice "got SIGHUP, asking for configuration" in
+      notice "got SIGHUP, asking for configuration" >>= fun () ->
       read_configuration fd)
 
 let handle_sigusr1 fd _ =
   Lwt.async
     (fun () ->
-      lwt () = notice "got SIGUSR1, asking for SRS secrets" in
+      notice "got SIGUSR1, asking for SRS secrets" >>= fun () ->
       read_srs_secrets fd)
 
 let flags =
@@ -125,10 +125,10 @@ let filter =
   }
 
 let main fd =
-  lwt () = notice "running instance %s" !instance_name in
+  notice "running instance %s" !instance_name >>= fun () ->
   ignore (Lwt_unix.on_signal Sys.sighup (handle_sighup fd));
   ignore (Lwt_unix.on_signal Sys.sigusr1 (handle_sigusr1 fd));
-  lwt () = read_srs_secrets fd in
+  read_srs_secrets fd >>= fun () ->
   let module C = Milter_callbacks in
   let callback_ops =
     { C.choose_forward_domain = proxymap_choose_forward_domain fd
@@ -154,18 +154,18 @@ let () =
     if Array.length Sys.argv = 3 then begin
       let srslyd_config = Sys.argv.(1) in
       let milter_config = Sys.argv.(2) in
-      lwt () = S_conf.load srslyd_config in
-      lwt () = M_conf.load milter_config in
+      S_conf.load srslyd_config >>= fun () ->
+      M_conf.load milter_config >>= fun () ->
       set_instance_name milter_config;
       return_unit
     end else
-      lwt () = notice "setting configuration parameters to default values" in
-      lwt () = S_conf.load_defaults () in
-      lwt () = M_conf.load_defaults () in
+      notice "setting configuration parameters to default values" >>= fun () ->
+      S_conf.load_defaults () >>= fun () ->
+      M_conf.load_defaults () >>= fun () ->
       return_unit in
   Lwt_main.run config_t;
   set_log_level (S_conf.srslyd_log_level ());
   Release.me
-    ~syslog:(S_conf.srslyd_background ())
+    ~logger:Future.Logger.syslog
     ~user:(S_conf.milter_user ())
     ~main:main ()

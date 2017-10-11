@@ -1,4 +1,7 @@
 #!/usr/bin/make -f
+
+export PATH := /home/andre/.opam/4.02.1/bin:$(PATH)
+
 %:
 	dh $@
 

@@ -1,12 +1,14 @@
 open Lwt
 open Printf
-open Release_config_values
-open Release_config_validations
+open Release_lwt
+open Release.Config.Value
+open Release.Config.Validation
 
 open Log_lwt
 open Util
 
-module O = Release_util.Option
+module O = Release.Util.Option
+module Value = Release.Config.Value
 
 type srslyd_config =
   { lock_file      : Lwt_io.file_name
@@ -56,6 +58,26 @@ type t =
   ; srs      : srs_config
   }
 
+let log_level =
+  string_in
+    [ "debug"
+    ; "info"
+    ; "notice"
+    ; "warning"
+    ; "error"
+    ; "fatal"
+    ]
+
+let log_level_value lvl =
+  match Value.to_string lvl with
+  | "debug" -> Lwt_log.Debug
+  | "info" -> Lwt_log.Info
+  | "notice" -> Lwt_log.Notice
+  | "warning" -> Lwt_log.Warning
+  | "error" -> Lwt_log.Error
+  | "fatal" -> Lwt_log.Fatal
+  | _ -> failwith "Invalid log level; shouldn't have happened"
+
 let secure_executable =
   [ file_with_mode 0o700
   ; file_with_owner "root"
@@ -94,47 +116,47 @@ let postfix_table = function
       `Invalid "postfix_table: not a string"
 
 module Srslyd_defaults = struct
-  let lock_file = default_string "/var/run/srslyd.pid"
-  let control_socket = default_string "/var/run/srslyd.sock"
-  let log_level = default_log_level Lwt_log.Notice
-  let background = default_bool true
-  let random_device = default_string "/dev/random"
+  let lock_file = Default.string "/var/run/srslyd.pid"
+  let control_socket = Default.string "/var/run/srslyd.sock"
+  let log_level = Default.string "notice"
+  let background = Default.bool true
+  let random_device = Default.string "/dev/random"
 end
 
 module Milter_defaults = struct
-  let user = default_string "srsly"
-  let executable = default_string "/usr/lib/srsly/srsly-milter"
-  let config_path = default_string "/etc/srsly/conf.d"
+  let user = Default.string "srsly"
+  let executable = Default.string "/usr/lib/srsly/srsly-milter"
+  let config_path = Default.string "/etc/srsly/conf.d"
 end
 
 module Proxymap_defaults = struct
-  let sender_lookup_table = default_string "hash:/etc/aliases"
-  let rcpt_lookup_table = default_string "hash:/etc/aliases"
-  let sender_lookup_key_fmt = default_string "{a}"
-  let rcpt_lookup_key_fmt = default_string "{a}"
-  let local_sender_regexp = default_regexp (Str.regexp "^[a-z]+$")
-  let local_rcpt_regexp = default_regexp (Str.regexp "^[a-z]+$")
-  let query_fmt = default_string
+  let sender_lookup_table = Default.string "hash:/etc/aliases"
+  let rcpt_lookup_table = Default.string "hash:/etc/aliases"
+  let sender_lookup_key_fmt = Default.string "{a}"
+  let rcpt_lookup_key_fmt = Default.string "{a}"
+  let local_sender_regexp = Default.regexp (Str.regexp "^[a-z]+$")
+  let local_rcpt_regexp = Default.regexp (Str.regexp "^[a-z]+$")
+  let query_fmt = Default.string
     "request\000lookup\000table\000{t}\000flags\000{f}\000key\000{k}\000\000"
-  let query_flags = default_int
+  let query_flags = Default.int
     16448 (* DICT_FLAG_FOLD_FIX | DICT_FLAG_LOCK *)
-  let query_socket = default_string "/var/spool/postfix/private/proxymap"
-  let sender_query_max_depth = default_int 1
-  let rcpt_query_max_depth = default_int 20
-  let sender_query_max_results = default_int 1
-  let rcpt_query_max_results = default_int 100
-  let result_fmt = default_string
+  let query_socket = Default.string "/var/spool/postfix/private/proxymap"
+  let sender_query_max_depth = Default.int 1
+  let rcpt_query_max_depth = Default.int 20
+  let sender_query_max_results = Default.int 1
+  let rcpt_query_max_results = Default.int 100
+  let result_fmt = Default.string
     "status\000{s}\000value\000{v}\000\000"
-  let result_value_separator = default_regexp (Str.regexp ", *")
+  let result_value_separator = Default.regexp (Str.regexp ", *")
 end
 
 module SRS_defaults = struct
-  let secret_file = default_string "/etc/srsly/srs_secret"
-  let secrets_directory = default_string "/etc/srsly/srs_secrets.d"
-  let hash_max_age = default_int 8
-  let hash_length = default_int 8
-  let separator = default_string "="
-  let secret_length = default_int 8
+  let secret_file = Default.string "/etc/srsly/srs_secret"
+  let secrets_directory = Default.string "/etc/srsly/srs_secrets.d"
+  let hash_max_age = Default.int 8
+  let hash_length = Default.int 8
+  let separator = Default.string "="
+  let secret_length = Default.int 8
 end
 
 let srslyd_spec =
@@ -196,58 +218,58 @@ let spec =
   ]
 
 let find_srslyd key conf =
-  Release_config.get conf "srslyd" key
+  Release.Config.get conf "srslyd" key
 
 let find_milter key conf =
-  Release_config.get conf "milter" key
+  Release.Config.get conf "milter" key
 
 let find_proxymap key conf =
-  Release_config.get conf "proxymap" key
+  Release.Config.get conf "proxymap" key
 
 let find_srs key conf =
-  Release_config.get conf "srs" key
+  Release.Config.get conf "srs" key
 
 let make c =
   let srslyd_config =
     let get = find_srslyd in
-    { lock_file = string_value (get "lock_file" c)
-    ; control_socket = string_value (get "control_socket" c)
-    ; background = bool_value (get "background" c)
+    { lock_file = Value.to_string (get "lock_file" c)
+    ; control_socket = Value.to_string (get "control_socket" c)
+    ; background = Value.to_bool (get "background" c)
     ; log_level = log_level_value (get "log_level" c)
-    ; random_device = string_value (get "random_device" c)
+    ; random_device = Value.to_string (get "random_device" c)
     } in
   let milter_config =
     let get = find_milter in
-    { user           = string_value (get "user" c)
-    ; executable     = string_value (get "executable" c)
-    ; config_path    = string_value (get "config_path" c)
+    { user           = Value.to_string (get "user" c)
+    ; executable     = Value.to_string (get "executable" c)
+    ; config_path    = Value.to_string (get "config_path" c)
     } in
   let proxymap_config =
     let get = find_proxymap in
-    { sender_lookup_table = string_value (get "sender_lookup_table" c)
-    ; rcpt_lookup_table = string_value (get "recipient_lookup_table" c)
-    ; sender_lookup_key_fmt = string_value (get "sender_lookup_key_format" c)
-    ; rcpt_lookup_key_fmt = string_value (get "recipient_lookup_key_format" c)
-    ; local_sender_regexp = regexp_value (get "local_sender_regexp" c)
-    ; local_rcpt_regexp = regexp_value (get "local_recipient_regexp" c)
-    ; query_fmt = string_value (get "query_format" c)
-    ; query_flags  = int_value (get "query_flags" c)
-    ; query_socket = string_value (get "query_socket" c)
-    ; sender_query_max_depth = int_value (get "sender_query_max_depth" c)
-    ; rcpt_query_max_depth = int_value (get "recipient_query_max_depth" c)
-    ; sender_query_max_results = int_value (get "sender_query_max_results" c)
-    ; rcpt_query_max_results = int_value (get "recipient_query_max_results" c)
-    ; result_fmt = string_value (get "result_format" c)
-    ; result_value_separator = regexp_value (get "result_value_separator" c)
+    { sender_lookup_table = Value.to_string (get "sender_lookup_table" c)
+    ; rcpt_lookup_table = Value.to_string (get "recipient_lookup_table" c)
+    ; sender_lookup_key_fmt = Value.to_string (get "sender_lookup_key_format" c)
+    ; rcpt_lookup_key_fmt = Value.to_string (get "recipient_lookup_key_format" c)
+    ; local_sender_regexp = Value.to_regexp (get "local_sender_regexp" c)
+    ; local_rcpt_regexp = Value.to_regexp (get "local_recipient_regexp" c)
+    ; query_fmt = Value.to_string (get "query_format" c)
+    ; query_flags  = Value.to_int (get "query_flags" c)
+    ; query_socket = Value.to_string (get "query_socket" c)
+    ; sender_query_max_depth = Value.to_int (get "sender_query_max_depth" c)
+    ; rcpt_query_max_depth = Value.to_int (get "recipient_query_max_depth" c)
+    ; sender_query_max_results = Value.to_int (get "sender_query_max_results" c)
+    ; rcpt_query_max_results = Value.to_int (get "recipient_query_max_results" c)
+    ; result_fmt = Value.to_string (get "result_format" c)
+    ; result_value_separator = Value.to_regexp (get "result_value_separator" c)
     } in
   let srs_config =
     let get = find_srs in
-    { secret_file        = string_value (get "secret_file" c)
-    ; secrets_directory  = string_value (get "secrets_directory" c)
-    ; hash_max_age       = int_value (get "hash_max_age" c)
-    ; hash_length        = int_value (get "hash_length" c)
-    ; separator          = (string_value (get "separator" c)).[0]
-    ; secret_length      = int_value (get "secret_length" c)
+    { secret_file        = Value.to_string (get "secret_file" c)
+    ; secrets_directory  = Value.to_string (get "secrets_directory" c)
+    ; hash_max_age       = Value.to_int (get "hash_max_age" c)
+    ; hash_length        = Value.to_int (get "hash_length" c)
+    ; separator          = (Value.to_string (get "separator" c)).[0]
+    ; secret_length      = Value.to_int (get "secret_length" c)
     } in
   { srslyd   = srslyd_config
   ; milter   = milter_config

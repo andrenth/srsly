@@ -1,9 +1,12 @@
-OASISFormat: 0.2
+OASISFormat: 0.4
 Name:        srsly
 Version:     2.0.0
 Synopsis:    SPF daemon
 Authors:     Andre Nathan
 License:     GPL-2
+
+BuildTools:  ocamlbuild
+Plugins:     META (0.4), DevFiles (0.4)
 
 Executable "srslyd"
   Path:            src
@@ -11,17 +14,15 @@ Executable "srslyd"
   MainIs:          srslyd.ml
   Install:         true
   CompiledObject:  best
-  BuildDepends:    lwt (>= 2.4.0),
-                   lwt.preemptive (>= 2.4.0),
-                   lwt.unix (>= 2.4.0),
-                   lwt.syntax (>= 2.4.0),
-                   release,
-                   release.config,
+  BuildDepends:    lwt (>= 3.1.0),
+                   lwt.preemptive (>= 3.1.0),
+                   lwt.unix (>= 3.1.0),
+                   release (>= 2.0.0),
+                   release.lwt (>= 2.0.0),
                    srs,
                    str,
                    threads,
-                   uint.uint32,
-                   uint.uint128
+                   stdint
 
 Executable "srsly-milter"
   Path:            src
@@ -29,19 +30,17 @@ Executable "srsly-milter"
   MainIs:          srsly_milter.ml
   Install:         true
   CompiledObject:  best
-  BuildDepends:    lwt (>= 2.4.0),
-                   lwt.preemptive (>= 2.4.0),
-                   lwt.unix (>= 2.4.0),
-                   lwt.syntax (>= 2.4.0),
+  BuildDepends:    lwt (>= 3.1.0),
+                   lwt.preemptive (>= 3.1.0),
+                   lwt.unix (>= 3.1.0),
                    milter,
-                   release,
-                   release.config,
+                   release (>= 2.0.0),
+                   release.lwt (>= 2.0.0),
                    spf,
                    srs,
                    str,
                    threads,
-                   uint.uint32,
-                   uint.uint128,
+                   stdint,
                    unix
 
 Executable "srsly"
@@ -50,17 +49,14 @@ Executable "srsly"
   MainIs:          srsly.ml
   Install:         true
   CompiledObject:  best
-  BuildDepends:    lwt (>= 2.4.0),
-                   lwt.unix (>= 2.4.0),
-                   lwt.syntax (>= 2.4.0),
+  BuildDepends:    lwt (>= 3.1.0),
+                   lwt.unix (>= 3.1.0),
                    milter,
-                   release,
-                   release.config,
-                   release.util,
+                   release (>= 2.0.0),
+                   release.lwt (>= 2.0.0),
                    spf,
                    srs,
                    str,
                    threads,
-                   uint.uint32,
-                   uint.uint128,
+                   stdint,
                    unix
